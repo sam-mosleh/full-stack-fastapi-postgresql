@@ -31,7 +31,6 @@ RUN bash -c "if [ $INSTALL_JUPYTER == 'true' ] ; then pip install jupyterlab ; f
 
 # Copy poetry.lock* in case it doesn't exist in the repo
 COPY ./app/pyproject.toml ./app/poetry.lock* /app/
-ADD ./app/wheelhouse/ ./wheelhouse/
 
 # Allow installing dev dependencies to run tests
 ARG INSTALL_DEV=false

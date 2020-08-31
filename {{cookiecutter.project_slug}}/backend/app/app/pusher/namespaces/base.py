@@ -17,7 +17,7 @@ class AuthenticatedNamespace(socketio.AsyncNamespace):
             "accept": "application/json",
         }
         async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.get(settings.TEST_TOKEN_URL) as response:
+            async with session.post(settings.TEST_TOKEN_URL) as response:
                 response_json = await response.json()
                 if response.status >= 400:
                     raise ConnectionRefusedError(response_json)
