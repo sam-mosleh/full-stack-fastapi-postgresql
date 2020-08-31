@@ -1,7 +1,15 @@
 import secrets
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import AnyHttpUrl, BaseSettings, EmailStr, HttpUrl, PostgresDsn, validator
+from pydantic import (
+    AnyHttpUrl,
+    BaseSettings,
+    EmailStr,
+    HttpUrl,
+    PostgresDsn,
+    RedisDsn,
+    validator,
+)
 
 
 class Settings(BaseSettings):
@@ -89,7 +97,7 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     REDIS_DSN: Optional[RedisDsn] = None
 
-        @validator("REDIS_DSN", pre=True)
+    @validator("REDIS_DSN", pre=True)
     def assemble_redis_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
         if isinstance(v, str):
             return v
