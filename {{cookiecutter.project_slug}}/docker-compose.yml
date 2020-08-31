@@ -104,13 +104,9 @@ services:
         - traefik.http.routers.${STACK_NAME?Variable not set}-pgadmin-https.tls.certresolver=le
         - traefik.http.services.${STACK_NAME?Variable not set}-pgadmin.loadbalancer.server.port=5050
 
-  queue:
-    image: rabbitmq:3
-    # Using the below image instead is required to enable the "Broker" tab in the flower UI:
-    # image: rabbitmq:3-management
-    #
-    # You also have to change the flower command
-  
+  redis:
+    image: redis:6
+
   flower:
     image: mher/flower
     networks:
@@ -119,10 +115,8 @@ services:
     env_file:
       - .env
     command:
-      - "--broker=amqp://guest@queue:5672//"
-      # For the "Broker" tab to work in the flower UI, uncomment the following command argument,
-      # and change the queue service's image as well
-      # - "--broker_api=http://guest:guest@queue:15672/api//"
+      - "--broker=redis://redis:6379/0"
+      - "--broker_api=redis://redis:6379/0"
     deploy:
       labels:
         - traefik.enable=true
