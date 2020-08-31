@@ -1,5 +1,7 @@
 from typing import Generator
 
+import aioredis
+import aioredlock
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
@@ -22,6 +24,14 @@ def get_db() -> Generator:
         yield db
     finally:
         db.close()
+
+
+def get_redis(request: starlette.requests.Request) -> aioredis.Redis:
+    return request.app.state.redis
+
+
+def get_lock(request: starlette.requests.Request) -> aioredlock.Aioredlock:
+    return request.app.state.lock
 
 
 def get_current_user(

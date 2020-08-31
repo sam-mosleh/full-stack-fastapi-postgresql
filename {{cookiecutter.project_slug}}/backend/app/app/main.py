@@ -1,3 +1,5 @@
+import aioredis
+import aioredlock
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
@@ -19,3 +21,16 @@ if settings.BACKEND_CORS_ORIGINS:
     )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+
+@app.on_event("startup")
+async def on_startup() -> None:
+    app.state.redis = await aioredis.create_redis_pool(settings.REDIS_DSN)
+    app.state.lock = aioredlock.Aioredlock([app.state.redis])
+
+
+@app.on_event("shutdown")
+async def on_shutdown() -> None:
+    app.state.redis.close()
+    await app.state.redis.wait_closed()
+    await app.state.lock.destroy()

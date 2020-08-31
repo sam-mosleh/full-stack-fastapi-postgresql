@@ -1,5 +1,6 @@
 from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
 
+from aioredis import Redis
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -44,7 +45,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db: Session,
         *,
         db_obj: ModelType,
-        obj_in: Union[UpdateSchemaType, Dict[str, Any]]
+        obj_in: Union[UpdateSchemaType, Dict[str, Any]],
     ) -> ModelType:
         obj_data = jsonable_encoder(db_obj)
         if isinstance(obj_in, dict):
@@ -64,3 +65,132 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db.delete(obj)
         db.commit()
         return obj
+
+
+CacheSchemaType = TypeVar("CacheSchemaType", bound=OrmMode)
+
+
+class CRUDCacheBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaType]):
+    def __init__(
+        self,
+        schema: Type[CacheSchemaType],
+        tablename: Optional[str] = None,
+        change_limit: int = 1000,
+    ):
+        self.schema = schema
+        self.tablename = tablename if tablename is not None else schema.__name__.lower()
+        self.change_limit = change_limit
+
+    def to_key(self, id: Union[int, str]) -> str:
+        return f"{self.tablename}:{id}"
+
+    def to_change_list_key(self, id: Union[int, str]) -> str:
+        return f"{self.to_key(id)}:changes"
+
+    async def exists(self, cache: Redis, *, id: Any) -> bool:
+        return await cache.exists(self.to_key(id))
+
+    async def add(self, cache: Redis, *, obj_in: CreateSchemaType) -> CacheSchemaType:
+        record_key = self.to_key(obj_in.id)
+        record = self.schema.from_orm(obj_in)
+        await cache.set(record_key, record.json())
+        return record
+
+    async def add_changes(
+        self, cache: Redis, *, obj: CacheSchemaType
+    ) -> CacheSchemaType:
+        change_list_key = self.to_change_list_key(obj.id)
+        await cache.lpush(change_list_key, obj.json())
+        await cache.ltrim(change_list_key, 0, self.change_limit - 1)
+        return obj
+
+    async def get(self, cache: Redis, *, id: Any) -> Optional[CacheSchemaType]:
+        result = await cache.get(self.to_key(id), encoding="utf-8")
+        return self.schema.parse_raw(result) if result is not None else None
+
+    async def get_changes(
+        self, cache: Redis, *, id: Any, limit: int = 1000
+    ) -> List[CacheSchemaType]:
+        change_list_key = self.to_change_list_key(id)
+        json_list = await cache.lrange(change_list_key, 0, limit - 1, encoding="utf-8")
+        return [self.schema.parse_raw(record) for record in json_list]
+
+    async def update(
+        self,
+        cache: Redis,
+        *,
+        cache_obj: CacheSchemaType,
+        obj_in: Union[UpdateSchemaType, Dict[str, Any]],
+    ) -> CacheSchemaType:
+        if isinstance(obj_in, dict):
+            update_data = obj_in
+        else:
+            update_data = obj_in.dict(exclude_unset=True)
+        record_key = self.to_key(cache_obj.id)
+        record = self.schema(**{**cache_obj.dict(), **update_data})
+        await cache.set(record_key, record.json())
+        return record
+
+    async def remove(self, cache: Redis, *, id: Any) -> Optional[CacheSchemaType]:
+        record = await self.get(cache=cache, id=id)
+        if record is not None:
+            await cache.delete(self.to_key(id))
+            return record
+        else:
+            return None
+
+
+class CRUDCacheDBBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaType]):
+    def __init__(
+        self, crud_db: CRUDBase, crud_cache: CRUDCacheBase,
+    ):
+        self.crud_db = crud_db
+        self.crud_cache = crud_cache
+
+    async def get(
+        self, db: Session, cache: Redis, *, id: Any
+    ) -> Optional[CacheSchemaType]:
+        result = await self.crud_cache.get(cache=cache, id=id)
+        if result is None:
+            search_result = self.crud_db.get(db, id)
+            if search_result is not None:
+                result = await self.crud_cache.add(cache, obj_in=search_result)
+        return result
+
+    async def load(
+        self, db: Session, cache: Redis, *, limit: Optional[int] = 1000
+    ) -> List[CacheSchemaType]:
+        records = self.crud_db.get_multi(db, limit=limit)
+        coros = []
+        for record in records:
+            existance = await self.crud_cache.exists(cache=cache, id=record.id)
+            if existance is False:
+                coros.append(self.crud_cache.add(cache, obj_in=record))
+        return await asyncio.gather(*coros)
+
+    async def create(
+        self, db: Session, cache: Redis, *, obj_in: CreateSchemaType
+    ) -> CacheSchemaType:
+        result = await self.crud_cache.add(cache, obj_in=obj_in)
+        self.crud_db.create(db, obj_in=obj_in)
+        return result
+
+    async def update(
+        self,
+        db: Session,
+        cache: Redis,
+        *,
+        cache_obj: CacheSchemaType,
+        obj_in: Union[UpdateSchemaType, Dict[str, Any]],
+    ) -> CacheSchemaType:
+        result = await self.crud_cache.update(
+            cache=cache, cache_obj=cache_obj, obj_in=obj_in
+        )
+        model = self.crud_db.get(db, cache_obj.id)
+        self.crud_db.update(db, db_obj=model, obj_in=obj_in)
+        return result
+
+    async def remove(self, db: Session, cache: Redis, *, id: Any) -> CacheSchemaType:
+        await self.crud_cache.remove(cache=cache, id=id)
+        model = self.crud_db.remove(db, id=id)
+        return self.crud_cache.schema.from_orm(model)
