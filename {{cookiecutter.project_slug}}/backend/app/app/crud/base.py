@@ -67,6 +67,13 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return obj
 
 
+class OrmMode(BaseModel):
+    id: Any
+
+    class Config:
+        orm_mode = True
+
+
 CacheSchemaType = TypeVar("CacheSchemaType", bound=OrmMode)
 
 

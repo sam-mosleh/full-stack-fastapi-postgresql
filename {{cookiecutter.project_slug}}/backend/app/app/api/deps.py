@@ -2,6 +2,7 @@ from typing import Generator
 
 import aioredis
 import aioredlock
+import starlette
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
