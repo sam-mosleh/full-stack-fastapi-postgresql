@@ -112,6 +112,9 @@ class Settings(BaseSettings):
             path=f"/{values.get('REDIS_DB') or 0}",
         )
 
+    TEST_TOKEN_URL: AnyHttpUrl
+    PUSHER_USER_NAMESPACE: str = "/user"
+
     class Config:
         case_sensitive = True
 
