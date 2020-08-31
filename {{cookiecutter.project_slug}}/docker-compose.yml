@@ -135,6 +135,7 @@ services:
     image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
     depends_on:
       - db
+      - redis
     env_file:
       - .env
     environment:
@@ -158,7 +159,7 @@ services:
     image: '${DOCKER_IMAGE_CELERYWORKER?Variable not set}:${TAG-latest}'
     depends_on:
       - db
-      - queue
+      - redis
     env_file:
       - .env
     environment:
