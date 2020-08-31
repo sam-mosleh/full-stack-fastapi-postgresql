@@ -90,6 +90,8 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER_PASSWORD: str
     USERS_OPEN_REGISTRATION: bool = False
 
+    LOGGER: str = "gunicorn"
+
     REDIS_HOST: str
     REDIS_PORT: Optional[str] = None
     REDIS_USER: Optional[str] = None
