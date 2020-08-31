@@ -50,6 +50,20 @@ def test_token(current_user: models.User = Depends(deps.get_current_user)) -> An
     return current_user
 
 
+@router.get("/login/refresh-token", response_model=schemas.Token)
+def test_token(current_user: models.User = Depends(deps.get_current_user)) -> Any:
+    """
+    Refresh access token
+    """
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    return {
+        "access_token": security.create_access_token(
+            current_user.id, expires_delta=access_token_expires
+        ),
+        "token_type": "bearer",
+    }
+
+
 @router.post("/password-recovery/{email}", response_model=schemas.Msg)
 def recover_password(email: str, db: Session = Depends(deps.get_db)) -> Any:
     """

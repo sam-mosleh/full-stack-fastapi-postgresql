@@ -124,6 +124,7 @@ The input variables, with their default values (some auto generated) are:
 * `docker_image_backend`: Docker image name for the backend. By default, it will be based on your Docker image prefix, e.g.: `git.example.com/development-team/my-awesome-project/backend`. And depending on your environment, a different tag will be appended ( `prod`, `stag`, `branch` ). So, the final image names used will be like: `git.example.com/development-team/my-awesome-project/backend:prod`.
 * `docker_image_celeryworker`: Docker image for the celery worker. By default, based on your Docker image prefix.
 * `docker_image_frontend`: Docker image for the frontend. By default, based on your Docker image prefix.
+* `docker_image_pusher`: Docker image for the pusher. By default, based on your Docker image prefix.
 
 ## How to deploy
 

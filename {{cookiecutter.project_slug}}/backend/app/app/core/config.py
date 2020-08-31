@@ -1,7 +1,15 @@
 import secrets
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import AnyHttpUrl, BaseSettings, EmailStr, HttpUrl, PostgresDsn, validator
+from pydantic import (
+    AnyHttpUrl,
+    BaseSettings,
+    EmailStr,
+    HttpUrl,
+    PostgresDsn,
+    RedisDsn,
+    validator,
+)
 
 
 class Settings(BaseSettings):
@@ -81,6 +89,31 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER: EmailStr
     FIRST_SUPERUSER_PASSWORD: str
     USERS_OPEN_REGISTRATION: bool = False
+
+    LOGGER: str = "gunicorn"
+
+    REDIS_HOST: str
+    REDIS_PORT: Optional[str] = None
+    REDIS_USER: Optional[str] = None
+    REDIS_PASSWORD: Optional[str] = None
+    REDIS_DB: int = 0
+    REDIS_DSN: Optional[RedisDsn] = None
+
+    @validator("REDIS_DSN", pre=True)
+    def assemble_redis_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
+        if isinstance(v, str):
+            return v
+        return RedisDsn.build(
+            scheme="redis",
+            host=values.get("REDIS_HOST"),
+            port=values.get("REDIS_PORT"),
+            user=values.get("REDIS_USER"),
+            password=values.get("REDIS_PASSWORD"),
+            path=f"/{values.get('REDIS_DB') or 0}",
+        )
+
+    TEST_TOKEN_URL: AnyHttpUrl
+    PUSHER_USER_NAMESPACE: str = "/user"
 
     class Config:
         case_sensitive = True
