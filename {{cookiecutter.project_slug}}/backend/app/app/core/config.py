@@ -112,7 +112,13 @@ class Settings(BaseSettings):
             path=f"/{values.get('REDIS_DB') or 0}",
         )
 
-    TEST_TOKEN_URL: AnyHttpUrl
+    GET_USER_URL: AnyHttpUrl
+    ACCESS_TOKEN_URL: Optional[str] = None
+
+    @validator("ACCESS_TOKEN_URL", pre=True)
+    def set_access_token_url(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
+        return v or (values["API_V1_STR"] + "/login/access-token")
+
     PUSHER_USER_NAMESPACE: str = "/user"
 
     class Config:
