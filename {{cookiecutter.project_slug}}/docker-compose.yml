@@ -106,6 +106,8 @@ services:
 
   redis:
     image: redis:6
+    volumes:
+      - app-redis-data:/data
 
   flower:
     image: mher/flower
@@ -212,6 +214,7 @@ services:
 
 volumes:
   app-db-data:
+  app-redis-data:
 
 networks:
   traefik-public:
