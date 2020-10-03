@@ -19,7 +19,7 @@ def read_items(
     """
     Retrieve items.
     """
-    if crud.user.is_superuser(current_user):
+    if current_user.is_superuser:
         items = crud.item.get_multi(db, skip=skip, limit=limit)
     else:
         items = crud.item.get_multi_by_owner(
@@ -54,9 +54,9 @@ def update_item(
     Update an item.
     """
     item = crud.item.get(db=db, id=id)
-    if not item:
+    if item is None:
         raise HTTPException(status_code=404, detail="Item not found")
-    if not crud.user.is_superuser(current_user) and (item.owner_id != current_user.id):
+    if not current_user.is_superuser and (item.owner_id != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
     item = crud.item.update(db=db, db_obj=item, obj_in=item_in)
     return item
@@ -73,9 +73,9 @@ def read_item(
     Get item by ID.
     """
     item = crud.item.get(db=db, id=id)
-    if not item:
+    if item is None:
         raise HTTPException(status_code=404, detail="Item not found")
-    if not crud.user.is_superuser(current_user) and (item.owner_id != current_user.id):
+    if not current_user.is_superuser and (item.owner_id != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
     return item
 
@@ -91,9 +91,9 @@ def delete_item(
     Delete an item.
     """
     item = crud.item.get(db=db, id=id)
-    if not item:
+    if item is None:
         raise HTTPException(status_code=404, detail="Item not found")
-    if not crud.user.is_superuser(current_user) and (item.owner_id != current_user.id):
+    if not current_user.is_superuser and (item.owner_id != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
     item = crud.item.remove(db=db, id=id)
     return item

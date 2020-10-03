@@ -1,5 +1,5 @@
 from .crud_item import item
-from .crud_user import user
+from .crud_user import user, user_cache, user_cachedb
 
 # For a new basic set of CRUD operations you could just do
 

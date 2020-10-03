@@ -3,9 +3,9 @@ from typing import Any, Dict, Optional, Union
 from sqlalchemy.orm import Session
 
 from app.core.security import get_password_hash, verify_password
-from app.crud.base import CRUDBase
+from app.crud.base import CRUDBase, CRUDCacheBase, CRUDCacheDBBase
 from app.models.user import User
-from app.schemas.user import UserCreate, UserUpdate
+from app.schemas.user import UserCreate, UserInDB, UserUpdate
 
 
 class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
@@ -39,17 +39,21 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 
     def authenticate(self, db: Session, *, email: str, password: str) -> Optional[User]:
         user = self.get_by_email(db, email=email)
-        if not user:
+        if user is None:
             return None
         if not verify_password(password, user.hashed_password):
             return None
         return user
 
-    def is_active(self, user: User) -> bool:
-        return user.is_active
 
-    def is_superuser(self, user: User) -> bool:
-        return user.is_superuser
+class CRUDCacheUser(CRUDCacheBase[UserInDB]):
+    pass
+
+
+class CRUDCacheDBUser(CRUDCacheDBBase[UserInDB, UserCreate, UserUpdate]):
+    pass
 
 
 user = CRUDUser(User)
+user_cache = CRUDCacheUser(UserInDB, User.__tablename__)
+user_cachedb = CRUDCacheDBUser(user, user_cache)

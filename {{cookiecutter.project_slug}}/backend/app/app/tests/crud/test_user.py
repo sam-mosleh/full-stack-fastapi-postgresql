@@ -38,8 +38,7 @@ def test_check_if_user_is_active(db: Session) -> None:
     password = random_lower_string()
     user_in = UserCreate(email=email, password=password)
     user = crud.user.create(db, obj_in=user_in)
-    is_active = crud.user.is_active(user)
-    assert is_active is True
+    assert user.is_active
 
 
 def test_check_if_user_is_active_inactive(db: Session) -> None:
@@ -47,8 +46,7 @@ def test_check_if_user_is_active_inactive(db: Session) -> None:
     password = random_lower_string()
     user_in = UserCreate(email=email, password=password, disabled=True)
     user = crud.user.create(db, obj_in=user_in)
-    is_active = crud.user.is_active(user)
-    assert is_active
+    assert user.is_active
 
 
 def test_check_if_user_is_superuser(db: Session) -> None:
@@ -56,8 +54,7 @@ def test_check_if_user_is_superuser(db: Session) -> None:
     password = random_lower_string()
     user_in = UserCreate(email=email, password=password, is_superuser=True)
     user = crud.user.create(db, obj_in=user_in)
-    is_superuser = crud.user.is_superuser(user)
-    assert is_superuser is True
+    assert user.is_superuser
 
 
 def test_check_if_user_is_superuser_normal_user(db: Session) -> None:
@@ -65,8 +62,7 @@ def test_check_if_user_is_superuser_normal_user(db: Session) -> None:
     password = random_lower_string()
     user_in = UserCreate(email=username, password=password)
     user = crud.user.create(db, obj_in=user_in)
-    is_superuser = crud.user.is_superuser(user)
-    assert is_superuser is False
+    assert not user.is_superuser
 
 
 def test_get_user(db: Session) -> None:
