@@ -180,9 +180,9 @@ class CRUDCacheDBBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaTyp
     async def create(
         self, db: Session, cache: Redis, *, obj_in: CreateSchemaType
     ) -> CacheSchemaType:
-        result = await self.crud_cache.add(cache, obj_in=obj_in)
-        self.crud_db.create(db, obj_in=obj_in)
-        return result
+        # TODO: how can cache be updated first
+        db_obj = self.crud_db.create(db, obj_in=obj_in)
+        return await self.crud_cache.add(cache, obj_in=db_obj)
 
     async def update(
         self,
