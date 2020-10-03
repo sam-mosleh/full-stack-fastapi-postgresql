@@ -1,5 +1,6 @@
 from typing import Any, List, Optional
 
+import aioredis
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.encoders import jsonable_encoder
 from pydantic.networks import EmailStr
