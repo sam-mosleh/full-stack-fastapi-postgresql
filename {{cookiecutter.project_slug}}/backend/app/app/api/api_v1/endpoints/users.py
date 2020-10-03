@@ -44,7 +44,7 @@ async def create_user(
             status_code=400,
             detail="The user with this username already exists in the system.",
         )
-    user = await crud.user_cachedb.create(db, obj_in=user_in)
+    user = await crud.user_cachedb.create(db, redis, obj_in=user_in)
     if settings.EMAILS_ENABLED and user_in.email:
         send_new_account_email(
             email_to=user_in.email, username=user_in.email, password=user_in.password
