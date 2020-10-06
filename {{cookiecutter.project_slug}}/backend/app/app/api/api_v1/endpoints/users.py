@@ -74,7 +74,7 @@ async def update_user_me(
     if email is not None:
         user_in.email = email
     return await crud.user_cachedb.update(
-        db, redis, db_obj=current_user, obj_in=user_in
+        db, redis, cache_obj=current_user, obj_in=user_in
     )
 
 
@@ -135,7 +135,7 @@ async def read_user_by_id(
 
 
 @router.put("/{user_id}", response_model=schemas.User)
-def update_user(
+async def update_user(
     *,
     user_id: int,
     user_in: schemas.UserUpdate,
@@ -146,11 +146,11 @@ def update_user(
     """
     Update a user.
     """
-    user = crud.user.get(db, id=user_id)
+    user = await crud.user_cachedb.get(db, redis, id=user_id)
     if user is None:
         raise HTTPException(
             status_code=404,
             detail="The user with this username does not exist in the system",
         )
-    user = crud.user.update(db, db_obj=user, obj_in=user_in)
+    user = await crud.user_cachedb.update(db, redis, cache_obj=user, obj_in=user_in)
     return user

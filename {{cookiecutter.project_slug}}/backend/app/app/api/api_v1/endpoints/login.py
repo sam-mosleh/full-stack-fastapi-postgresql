@@ -5,7 +5,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from app import crud, models, schemas
+from app import crud, schemas
 from app.api import deps
 from app.core import security
 from app.core.config import settings
@@ -31,8 +31,8 @@ def login_access_token(
     )
     if user is None:
         raise HTTPException(status_code=400, detail="Incorrect email or password")
-    elif not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+    # elif not user.is_active:
+    #     raise HTTPException(status_code=400, detail="Inactive user")
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
         "access_token": security.create_access_token(
@@ -43,7 +43,7 @@ def login_access_token(
 
 
 @router.post("/login/test-token", response_model=schemas.User)
-def test_token(current_user: models.User = Depends(deps.get_current_user)) -> Any:
+def test_token(current_user: schemas.UserInDB = Depends(deps.get_current_user)) -> Any:
     """
     Test access token
     """
@@ -51,7 +51,7 @@ def test_token(current_user: models.User = Depends(deps.get_current_user)) -> An
 
 
 @router.get("/login/refresh-token", response_model=schemas.Token)
-def test_token(current_user: models.User = Depends(deps.get_current_user)) -> Any:
+def test_token(current_user: schemas.UserInDB = Depends(deps.get_current_user)) -> Any:
     """
     Refresh access token
     """
