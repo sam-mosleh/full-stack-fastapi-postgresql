@@ -77,12 +77,12 @@ class OrmMode(BaseModel):
 CacheSchemaType = TypeVar("CacheSchemaType", bound=OrmMode)
 
 
-class CRUDCacheBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaType]):
+class CRUDCacheBase(Generic[CacheSchemaType]):
     def __init__(
         self,
         schema: Type[CacheSchemaType],
         tablename: Optional[str] = None,
-        change_limit: int = 1000,
+        change_limit: int = 1,
     ):
         self.schema = schema
         self.tablename = tablename if tablename is not None else schema.__name__.lower()
@@ -97,10 +97,12 @@ class CRUDCacheBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaType]
     async def exists(self, cache: Redis, *, id: Any) -> bool:
         return await cache.exists(self.to_key(id))
 
-    async def add(self, cache: Redis, *, obj_in: CreateSchemaType) -> CacheSchemaType:
+    async def add(
+        self, cache: Redis, *, obj_in: CacheSchemaType, expire: Optional[int] = None
+    ) -> CacheSchemaType:
         record_key = self.to_key(obj_in.id)
         record = self.schema.from_orm(obj_in)
-        await cache.set(record_key, record.json())
+        await cache.set(record_key, record.json(), expire=expire)
         return record
 
     async def add_changes(
@@ -127,7 +129,7 @@ class CRUDCacheBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaType]
         cache: Redis,
         *,
         cache_obj: CacheSchemaType,
-        obj_in: Union[UpdateSchemaType, Dict[str, Any]],
+        obj_in: Union[CacheSchemaType, Dict[str, Any]],
     ) -> CacheSchemaType:
         if isinstance(obj_in, dict):
             update_data = obj_in
@@ -170,17 +172,17 @@ class CRUDCacheDBBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaTyp
         records = self.crud_db.get_multi(db, limit=limit)
         coros = []
         for record in records:
-            existance = await self.crud_cache.exists(cache=cache, id=record.id)
-            if existance is False:
+            exists = await self.crud_cache.exists(cache=cache, id=record.id)
+            if not exists:
                 coros.append(self.crud_cache.add(cache, obj_in=record))
         return await asyncio.gather(*coros)
 
     async def create(
         self, db: Session, cache: Redis, *, obj_in: CreateSchemaType
     ) -> CacheSchemaType:
-        result = await self.crud_cache.add(cache, obj_in=obj_in)
-        self.crud_db.create(db, obj_in=obj_in)
-        return result
+        # TODO: how can cache be updated first
+        db_obj = self.crud_db.create(db, obj_in=obj_in)
+        return await self.crud_cache.add(cache, obj_in=db_obj)
 
     async def update(
         self,

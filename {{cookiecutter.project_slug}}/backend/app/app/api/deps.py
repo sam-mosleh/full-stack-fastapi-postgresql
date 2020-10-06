@@ -9,14 +9,12 @@ from jose import jwt
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app import crud, models, schemas
+from app import crud, schemas
 from app.core import security
 from app.core.config import settings
 from app.db.session import SessionLocal
 
-reusable_oauth2 = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_STR}/login/access-token"
-)
+reusable_oauth2 = OAuth2PasswordBearer(tokenUrl=settings.ACCESS_TOKEN_URL)
 
 
 def get_db() -> Generator:
@@ -35,9 +33,11 @@ def get_lock(request: starlette.requests.Request) -> aioredlock.Aioredlock:
     return request.app.state.lock
 
 
-def get_current_user(
-    db: Session = Depends(get_db), token: str = Depends(reusable_oauth2)
-) -> models.User:
+async def get_current_user(
+    db: Session = Depends(get_db),
+    redis: aioredis.Redis = Depends(get_redis),
+    token: str = Depends(reusable_oauth2),
+) -> schemas.UserInDB:
     try:
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
@@ -48,24 +48,24 @@ def get_current_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
         )
-    user = crud.user.get(db, id=token_data.sub)
-    if not user:
+    user = await crud.user_cachedb.get(db, redis, id=token_data.sub)
+    if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
 
 def get_current_active_user(
-    current_user: models.User = Depends(get_current_user),
-) -> models.User:
-    if not crud.user.is_active(current_user):
+    current_user: schemas.UserInDB = Depends(get_current_user),
+) -> schemas.UserInDB:
+    if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
 
 def get_current_active_superuser(
-    current_user: models.User = Depends(get_current_user),
-) -> models.User:
-    if not crud.user.is_superuser(current_user):
+    current_user: schemas.UserInDB = Depends(get_current_user),
+) -> schemas.UserInDB:
+    if not current_user.is_superuser:
         raise HTTPException(
             status_code=400, detail="The user doesn't have enough privileges"
         )

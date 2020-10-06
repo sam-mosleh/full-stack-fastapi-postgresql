@@ -11,7 +11,10 @@ ENV GROUP_ID=1000 \
     PYTHONHASHSEED=random \
     PIP_NO_CACHE_DIR=off \
     PIP_DEFAULT_TIMEOUT=100 \
-    TZ=Asia/Tehran
+    TZ=Asia/Tehran \
+    MAX_WORKERS=1 \
+    PRE_START_PATH=/app/pusher-prestart.sh \
+    MODULE_NAME="app.pusher"
 
 # Create the project user
 RUN groupadd -g $GROUP_ID apprunner && \
@@ -37,7 +40,3 @@ ARG INSTALL_DEV=false
 RUN bash -c "if [ $INSTALL_DEV == 'true' ] ; then poetry install --no-root ; else poetry install --no-root --no-dev ; fi"
 
 COPY ./app /app
-
-ENV MAX_WORKERS=1 \
-    PRE_START_PATH=/app/pusher-prestart.sh \
-    MODULE_NAME="app.pusher"

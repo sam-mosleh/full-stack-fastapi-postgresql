@@ -3,7 +3,7 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app import crud, models, schemas
+from app import crud, schemas
 from app.api import deps
 
 router = APIRouter()
@@ -14,12 +14,12 @@ def read_items(
     db: Session = Depends(deps.get_db),
     skip: int = 0,
     limit: int = 100,
-    current_user: models.User = Depends(deps.get_current_active_user),
+    current_user: schemas.UserInDB = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     Retrieve items.
     """
-    if crud.user.is_superuser(current_user):
+    if current_user.is_superuser:
         items = crud.item.get_multi(db, skip=skip, limit=limit)
     else:
         items = crud.item.get_multi_by_owner(
@@ -33,7 +33,7 @@ def create_item(
     *,
     db: Session = Depends(deps.get_db),
     item_in: schemas.ItemCreate,
-    current_user: models.User = Depends(deps.get_current_active_user),
+    current_user: schemas.UserInDB = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     Create new item.
@@ -48,15 +48,15 @@ def update_item(
     db: Session = Depends(deps.get_db),
     id: int,
     item_in: schemas.ItemUpdate,
-    current_user: models.User = Depends(deps.get_current_active_user),
+    current_user: schemas.UserInDB = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     Update an item.
     """
     item = crud.item.get(db=db, id=id)
-    if not item:
+    if item is None:
         raise HTTPException(status_code=404, detail="Item not found")
-    if not crud.user.is_superuser(current_user) and (item.owner_id != current_user.id):
+    if not current_user.is_superuser and (item.owner_id != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
     item = crud.item.update(db=db, db_obj=item, obj_in=item_in)
     return item
@@ -67,15 +67,15 @@ def read_item(
     *,
     db: Session = Depends(deps.get_db),
     id: int,
-    current_user: models.User = Depends(deps.get_current_active_user),
+    current_user: schemas.UserInDB = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     Get item by ID.
     """
     item = crud.item.get(db=db, id=id)
-    if not item:
+    if item is None:
         raise HTTPException(status_code=404, detail="Item not found")
-    if not crud.user.is_superuser(current_user) and (item.owner_id != current_user.id):
+    if not current_user.is_superuser and (item.owner_id != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
     return item
 
@@ -85,15 +85,15 @@ def delete_item(
     *,
     db: Session = Depends(deps.get_db),
     id: int,
-    current_user: models.User = Depends(deps.get_current_active_user),
+    current_user: schemas.UserInDB = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     Delete an item.
     """
     item = crud.item.get(db=db, id=id)
-    if not item:
+    if item is None:
         raise HTTPException(status_code=404, detail="Item not found")
-    if not crud.user.is_superuser(current_user) and (item.owner_id != current_user.id):
+    if not current_user.is_superuser and (item.owner_id != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
     item = crud.item.remove(db=db, id=id)
     return item
