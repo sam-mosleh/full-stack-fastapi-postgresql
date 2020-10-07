@@ -5,7 +5,7 @@ from app.core.config import settings
 from app.core.log import logger
 from app.pusher.namespaces import root_namespace, user_namespace
 
-mgr = socketio.AsyncRedisManager(settings.REDIS_DSN)
+mgr = socketio.AsyncRedisManager(settings.PUSHER_REDIS_DSN)
 sio = socketio.AsyncServer(async_mode="asgi", client_manager=mgr, logger=logger)
 
 sio.register_namespace(root_namespace)
@@ -13,7 +13,7 @@ sio.register_namespace(user_namespace)
 
 
 async def on_startup():
-    sio.cache = await aioredis.create_redis_pool(settings.REDIS_DSN)
+    sio.cache = await aioredis.create_redis_pool(settings.PUSHER_REDIS_DSN)
 
 
 async def on_shutdown():

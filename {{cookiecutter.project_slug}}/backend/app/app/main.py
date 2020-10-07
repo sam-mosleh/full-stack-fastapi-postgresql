@@ -25,7 +25,7 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.on_event("startup")
 async def on_startup() -> None:
-    app.state.redis = await aioredis.create_redis_pool(settings.REDIS_DSN)
+    app.state.redis = await aioredis.create_redis_pool(settings.APP_REDIS_DSN)
     app.state.lock = aioredlock.Aioredlock([app.state.redis])
 
 
