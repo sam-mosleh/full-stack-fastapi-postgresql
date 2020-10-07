@@ -1,24 +1,26 @@
 from typing import Dict
 
-import aiohttp
 import socketio
+from fastapi import HTTPException
 from socketio.exceptions import ConnectionRefusedError
 
-from app.core.config import settings
+from app import schemas
+from app.api import deps
+from app.db.session import SessionLocal
 
 
 class AuthenticatedNamespace(socketio.AsyncNamespace):
     async def on_connect(self, sid, environ):
         await self.authenticate_user(environ)
 
-    async def authenticate_user(self, environ: Dict):
-        headers = {
-            "Authorization": environ.get("HTTP_AUTHORIZATION"),
-            "accept": "application/json",
-        }
-        async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.get(settings.GET_USER_URL) as response:
-                response_json = await response.json()
-                if response.status >= 400:
-                    raise ConnectionRefusedError(response_json)
-                return response_json
+    async def authenticate_user(self, environ: Dict) -> schemas.UserInDB:
+        token = environ.get("HTTP_AUTHORIZATION")
+        if token is None:
+            raise ConnectionRefusedError("Not authenticated")
+        db = SessionLocal()
+        try:
+            return await deps.get_current_user(db, self.server.cache, token)
+        except HTTPException as e:
+            raise ConnectionRefusedError(e.detail)
+        finally:
+            db.close()
