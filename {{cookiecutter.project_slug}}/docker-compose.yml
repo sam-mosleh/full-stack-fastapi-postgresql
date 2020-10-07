@@ -117,8 +117,8 @@ services:
     env_file:
       - .env
     command:
-      - "--broker=redis://redis:6379/0"
-      - "--broker_api=redis://redis:6379/0"
+      - "--broker=redis://${REDIS_HOST}:${REDIS_PORT-6379}/${CELERY_REDIS_DB}"
+      - "--broker_api=redis://${REDIS_HOST}:${REDIS_PORT-6379}/${CELERY_REDIS_DB}"
     deploy:
       labels:
         - traefik.enable=true

@@ -96,11 +96,17 @@ class Settings(BaseSettings):
     REDIS_PORT: Optional[str] = None
     REDIS_USER: Optional[str] = None
     REDIS_PASSWORD: Optional[str] = None
-    REDIS_DB: int = 0
-    REDIS_DSN: Optional[RedisDsn] = None
+    APP_REDIS_DB: int
+    CELERY_REDIS_DB: int
+    PUSHER_REDIS_DB: int
+    APP_REDIS_DSN: Optional[RedisDsn] = None
+    CELERY_REDIS_DSN: Optional[RedisDsn] = None
+    PUSHER_REDIS_DSN: Optional[RedisDsn] = None
 
-    @validator("REDIS_DSN", pre=True)
-    def assemble_redis_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
+    @validator("APP_REDIS_DSN", pre=True)
+    def assemble_app_redis_connection(
+        cls, v: Optional[str], values: Dict[str, Any]
+    ) -> Any:
         if isinstance(v, str):
             return v
         return RedisDsn.build(
@@ -109,7 +115,37 @@ class Settings(BaseSettings):
             port=values.get("REDIS_PORT"),
             user=values.get("REDIS_USER"),
             password=values.get("REDIS_PASSWORD"),
-            path=f"/{values.get('REDIS_DB') or 0}",
+            path=f"/{values.get('APP_REDIS_DB')}",
+        )
+
+    @validator("CELERY_REDIS_DSN", pre=True)
+    def assemble_celery_redis_connection(
+        cls, v: Optional[str], values: Dict[str, Any]
+    ) -> Any:
+        if isinstance(v, str):
+            return v
+        return RedisDsn.build(
+            scheme="redis",
+            host=values.get("REDIS_HOST"),
+            port=values.get("REDIS_PORT"),
+            user=values.get("REDIS_USER"),
+            password=values.get("REDIS_PASSWORD"),
+            path=f"/{values.get('CELERY_REDIS_DB')}",
+        )
+
+    @validator("PUSHER_REDIS_DSN", pre=True)
+    def assemble_pusher_redis_connection(
+        cls, v: Optional[str], values: Dict[str, Any]
+    ) -> Any:
+        if isinstance(v, str):
+            return v
+        return RedisDsn.build(
+            scheme="redis",
+            host=values.get("REDIS_HOST"),
+            port=values.get("REDIS_PORT"),
+            user=values.get("REDIS_USER"),
+            password=values.get("REDIS_PASSWORD"),
+            path=f"/{values.get('PUSHER_REDIS_DB')}",
         )
 
     ACCESS_TOKEN_URL: Optional[str] = None
