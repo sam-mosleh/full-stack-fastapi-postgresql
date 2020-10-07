@@ -112,7 +112,6 @@ class Settings(BaseSettings):
             path=f"/{values.get('REDIS_DB') or 0}",
         )
 
-    GET_USER_URL: AnyHttpUrl
     ACCESS_TOKEN_URL: Optional[str] = None
 
     @validator("ACCESS_TOKEN_URL", pre=True)

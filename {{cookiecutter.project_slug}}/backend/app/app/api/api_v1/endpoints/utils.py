@@ -7,7 +7,7 @@ from app import schemas
 from app.api import deps
 from app.core.celery_app import celery_app
 from app.core.socket import external_sio
-from app.pusher.namespaces.user import emit_user
+from app.pusher.namespaces import user_namespace
 from app.utils import send_test_email
 
 router = APIRouter()
@@ -45,5 +45,5 @@ async def test_socket(
     """
     Test SocketIO private data.
     """
-    await emit_user(external_sio, current_user.id, msg.msg)
+    await user_namespace.emit_private(external_sio, current_user.id, msg.msg)
     return {"msg": "Sent"}
