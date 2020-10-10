@@ -17,8 +17,7 @@ def random_email() -> str:
 
 def get_superuser_token_headers(client: TestClient) -> Dict[str, str]:
     login_data = {
-        "username": settings.FIRST_SUPERUSER_EMAIL,
-        "email": settings.FIRST_SUPERUSER_EMAIL,
+        "username": settings.FIRST_SUPERUSER_USERNAME,
         "password": settings.FIRST_SUPERUSER_PASSWORD,
     }
     r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
