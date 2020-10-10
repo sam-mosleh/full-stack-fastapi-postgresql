@@ -1,5 +1,6 @@
 from typing import Dict, Generator
 
+import aioredis
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -21,6 +22,14 @@ from app.tests.utils.utils import (
 @pytest.fixture(scope="session")
 def db() -> Generator:
     yield SessionLocal()
+
+
+@pytest.fixture(scope="module")
+async def redis() -> aioredis.Redis:
+    cache = await aioredis.create_redis_pool(settings.APP_REDIS_DSN)
+    yield cache
+    cache.close()
+    await cache.wait_closed()
 
 
 @pytest.fixture(scope="module")

@@ -1,4 +1,7 @@
+import aioredis
+import pytest
 from fastapi.encoders import jsonable_encoder
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app import crud
@@ -87,3 +90,49 @@ def test_update_user(db: Session, new_user: User) -> None:
     assert user.username == new_user.username
     assert user.email == new_user.email
     assert verify_password(new_password, user.hashed_password)
+
+
+@pytest.mark.asyncio
+async def test_cachedb_create_user(db: Session, redis: aioredis.Redis):
+    username = random_lower_string()
+    email = random_email()
+    password = random_lower_string()
+    user_in = UserCreate(username=username, email=email, password=password)
+    user = await crud.user_cachedb.create(db, redis, obj_in=user_in)
+    assert user.username == username
+    assert user.email == email
+    assert hasattr(user, "hashed_password")
+
+
+@pytest.mark.asyncio
+async def test_cachedb_get_user(db: Session, redis: aioredis.Redis, new_user: User):
+    user = await crud.user_cachedb.get(db, redis, id=new_user.id)
+    assert user
+    assert user.username == new_user.username
+    assert user.email == new_user.email
+    assert jsonable_encoder(user) == jsonable_encoder(new_user)
+
+
+@pytest.mark.asyncio
+async def test_cachedb_update_user(db: Session, redis: aioredis.Redis, new_user: User):
+    user = await crud.user_cachedb.get(db, cache, id=new_user.id)
+    new_password = random_lower_string()
+    user_in_update = UserUpdate(password=new_password)
+    await crud.user_cachedb.update(db, db_obj=user, obj_in=user_in_update)
+    user = await crud.user_cachedb.get(db, id=new_user.id)
+    assert user
+    assert user.username == new_user.username
+    assert user.email == new_user.email
+    assert verify_password(new_password, user.hashed_password)
+
+
+def test_create_user_with_empty_password_is_not_allowed():
+    username = random_lower_string()
+    email = random_email()
+    with pytest.raises(ValidationError):
+        UserCreate(username=username, email=email, password=None)
+
+
+def test_update_user_password_to_empty_is_not_allowed():
+    with pytest.raises(ValidationError):
+        UserUpdate(password=None)
