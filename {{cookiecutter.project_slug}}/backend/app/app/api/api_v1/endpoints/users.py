@@ -1,9 +1,7 @@
-from typing import Any, List, Optional
+from typing import Any, List
 
 import aioredis
-from fastapi import APIRouter, Body, Depends, HTTPException
-from fastapi.encoders import jsonable_encoder
-from pydantic.networks import EmailStr
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app import crud, schemas
@@ -45,9 +43,9 @@ async def create_user(
             detail="The user with this username already exists in the system.",
         )
     user = await crud.user_cachedb.create(db, redis, obj_in=user_in)
-    if settings.EMAILS_ENABLED and user_in.email:
+    if settings.EMAILS_ENABLED:
         send_new_account_email(
-            email_to=user_in.email, username=user_in.email, password=user_in.password
+            email_to=user.email, username=user.username, password=user_in.password
         )
     return user
 
@@ -55,9 +53,7 @@ async def create_user(
 @router.put("/me", response_model=schemas.User)
 async def update_user_me(
     *,
-    password: str = Body(None),
-    full_name: str = Body(None),
-    email: EmailStr = Body(None),
+    user_in: schemas.UnprivilegedUserUpdate,
     db: Session = Depends(deps.get_db),
     redis: aioredis.Redis = Depends(deps.get_redis),
     current_user: schemas.UserInDB = Depends(deps.get_current_active_user),
@@ -65,14 +61,7 @@ async def update_user_me(
     """
     Update own user.
     """
-    current_user_data = jsonable_encoder(current_user)
-    user_in = schemas.UserUpdate(**current_user_data)
-    if password is not None:
-        user_in.password = password
-    if full_name is not None:
-        user_in.full_name = full_name
-    if email is not None:
-        user_in.email = email
+    user_in = schemas.UserUpdate(**user_in.dict(exclude_unset=True))
     return await crud.user_cachedb.update(
         db, redis, cache_obj=current_user, obj_in=user_in
     )
@@ -92,9 +81,7 @@ def read_user_me(
 @router.post("/open", response_model=schemas.User)
 async def create_user_open(
     *,
-    password: str = Body(...),
-    email: EmailStr = Body(...),
-    full_name: Optional[str] = Body(None),
+    user_in: schemas.UnprivilegedUserCreate,
     db: Session = Depends(deps.get_db),
     redis: aioredis.Redis = Depends(deps.get_redis),
 ) -> Any:
@@ -106,14 +93,18 @@ async def create_user_open(
             status_code=403,
             detail="Open user registration is forbidden on this server",
         )
-    user = crud.user.get_by_email(db, email=email)
+    user = crud.user.get_by_email(db, email=user_in.email)
     if user is not None:
         raise HTTPException(
             status_code=400,
             detail="The user with this username already exists in the system",
         )
-    user_in = schemas.UserCreate(password=password, email=email, full_name=full_name)
-    return await crud.user_cachedb.create(db, redis, obj_in=user_in)
+    user_in = schemas.UserCreate(user_in.dict(exclude_unset=True))
+    user = await crud.user_cachedb.create(db, redis, obj_in=user_in)
+    if settings.EMAILS_ENABLED and user_in.email:
+        send_new_account_email(
+            email_to=user_in.email, username=user_in.email, password=user_in.password
+        )
 
 
 @router.get("/{user_id}", response_model=schemas.User)
