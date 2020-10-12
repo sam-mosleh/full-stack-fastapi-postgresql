@@ -99,9 +99,11 @@ async def test_cachedb_create_user(db: Session, redis: aioredis.Redis):
     password = random_lower_string()
     user_in = UserCreate(username=username, email=email, password=password)
     user = await crud.user_cachedb.create(db, redis, obj_in=user_in)
-    assert user.username == username
-    assert user.email == email
+    db_user = crud.user.get(db, id=user.id)
+    assert user.username == db_user.username == username
+    assert user.email == db_user.email == email
     assert hasattr(user, "hashed_password")
+    assert hasattr(db_user, "hashed_password")
 
 
 @pytest.mark.asyncio
@@ -115,15 +117,17 @@ async def test_cachedb_get_user(db: Session, redis: aioredis.Redis, new_user: Us
 
 @pytest.mark.asyncio
 async def test_cachedb_update_user(db: Session, redis: aioredis.Redis, new_user: User):
-    user = await crud.user_cachedb.get(db, cache, id=new_user.id)
+    user = await crud.user_cachedb.get(db, redis, id=new_user.id)
     new_password = random_lower_string()
     user_in_update = UserUpdate(password=new_password)
-    await crud.user_cachedb.update(db, db_obj=user, obj_in=user_in_update)
-    user = await crud.user_cachedb.get(db, id=new_user.id)
+    await crud.user_cachedb.update(db, redis, cache_obj=user, obj_in=user_in_update)
+    user = await crud.user_cachedb.get(db, redis, id=new_user.id)
+    db_user = crud.user.get(db, id=new_user.id)
     assert user
     assert user.username == new_user.username
     assert user.email == new_user.email
     assert verify_password(new_password, user.hashed_password)
+    assert verify_password(new_password, db_user.hashed_password)
 
 
 def test_create_user_with_empty_password_is_not_allowed():

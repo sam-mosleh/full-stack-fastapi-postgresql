@@ -1,3 +1,4 @@
+import uuid
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr, validator
@@ -59,7 +60,7 @@ class UserUpdate(UserBase):
 
 
 class UserInDBBase(UserBase):
-    id: int
+    id: uuid.UUID
 
     class Config:
         orm_mode = True

@@ -1,3 +1,4 @@
+import asyncio
 from typing import Dict, Generator
 
 import aioredis
@@ -20,11 +21,18 @@ from app.tests.utils.utils import (
 
 
 @pytest.fixture(scope="session")
+def event_loop():
+    loop = asyncio.get_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest.fixture(scope="session")
 def db() -> Generator:
     yield SessionLocal()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 async def redis() -> aioredis.Redis:
     cache = await aioredis.create_redis_pool(settings.APP_REDIS_DSN)
     yield cache

@@ -33,8 +33,12 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return db.query(self.model).offset(skip).limit(limit).all()
 
     def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
-        obj_in_data = jsonable_encoder(obj_in)
-        db_obj = self.model(**obj_in_data)  # type: ignore
+        # obj_in_data = jsonable_encoder(obj_in)
+        # return self.create_from_dict(db, obj_in=obj_in_data)
+        return self.create_from_dict(db, obj_in=obj_in.dict())
+
+    def create_from_dict(self, db: Session, *, obj_in: Dict[str, Any]) -> ModelType:
+        db_obj = self.model(**obj_in)  # type: ignore
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
@@ -47,11 +51,16 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db_obj: ModelType,
         obj_in: Union[UpdateSchemaType, Dict[str, Any]],
     ) -> ModelType:
-        obj_data = jsonable_encoder(db_obj)
         if isinstance(obj_in, dict):
             update_data = obj_in
         else:
             update_data = obj_in.dict(exclude_unset=True)
+        return self.update_from_dict(db, db_obj=db_obj, update_data=update_data)
+
+    def update_from_dict(
+        self, db: Session, *, db_obj: ModelType, update_data: Dict[str, Any],
+    ) -> ModelType:
+        obj_data = jsonable_encoder(db_obj)
         for field in obj_data:
             if field in update_data:
                 setattr(db_obj, field, update_data[field])
@@ -131,12 +140,13 @@ class CRUDCacheBase(Generic[CacheSchemaType]):
         cache_obj: CacheSchemaType,
         obj_in: Union[CacheSchemaType, Dict[str, Any]],
     ) -> CacheSchemaType:
+        data = cache_obj.dict()
         if isinstance(obj_in, dict):
-            update_data = obj_in
+            data.update(obj_in)
         else:
-            update_data = obj_in.dict(exclude_unset=True)
+            data.update(obj_in.dict(exclude_unset=True))
+        record = self.schema(**data)
         record_key = self.to_key(cache_obj.id)
-        record = self.schema(**{**cache_obj.dict(), **update_data})
         await cache.set(record_key, record.json())
         return record
 
@@ -180,9 +190,9 @@ class CRUDCacheDBBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaTyp
     async def create(
         self, db: Session, cache: Redis, *, obj_in: CreateSchemaType
     ) -> CacheSchemaType:
-        # TODO: how can cache be updated first
-        db_obj = self.crud_db.create(db, obj_in=obj_in)
-        return await self.crud_cache.add(cache, obj_in=db_obj)
+        result = await self.crud_cache.add(cache, obj_in=obj_in)
+        self.crud_db.create(db, obj_in=obj_in)
+        return result
 
     async def update(
         self,
