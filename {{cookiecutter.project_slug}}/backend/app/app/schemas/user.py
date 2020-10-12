@@ -18,6 +18,8 @@ class UnprivilegedUserCreate(UnprivilegedUserBase):
 
 # Properties to receive via API on update by regular members
 class UnprivilegedUserUpdate(UnprivilegedUserBase):
+    username: Optional[str]
+    email: Optional[EmailStr]
     password: Optional[str] = None
 
     @validator("password")

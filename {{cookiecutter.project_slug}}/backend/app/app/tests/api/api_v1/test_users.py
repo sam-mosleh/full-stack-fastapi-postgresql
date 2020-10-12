@@ -12,7 +12,7 @@ from app.tests.utils.utils import random_email, random_lower_string
 def test_get_users_superuser_me(
     client: TestClient, superuser_token_headers: Dict[str, str]
 ) -> None:
-    r = client.get(f"{settings.API_V1_STR}/users/me", headers=superuser_token_headers)
+    r = client.get(f"{settings.API_V1_STR}/users", headers=superuser_token_headers)
     current_user = r.json()
     assert current_user
     assert current_user["is_active"] is True
@@ -23,7 +23,7 @@ def test_get_users_superuser_me(
 def test_get_users_normal_user_me(
     client: TestClient, normal_user_token_headers: Dict[str, str]
 ) -> None:
-    r = client.get(f"{settings.API_V1_STR}/users/me", headers=normal_user_token_headers)
+    r = client.get(f"{settings.API_V1_STR}/users", headers=normal_user_token_headers)
     current_user = r.json()
     assert current_user
     assert current_user["is_active"] is True
@@ -34,11 +34,14 @@ def test_get_users_normal_user_me(
 def test_create_user_new_email(
     client: TestClient, superuser_token_headers: dict, db: Session
 ) -> None:
+    username = random_lower_string()
     email = random_email()
     password = random_lower_string()
-    data = {"username": email, "email": email, "password": password}
+    data = {"username": username, "email": email, "password": password}
     r = client.post(
-        f"{settings.API_V1_STR}/users/", headers=superuser_token_headers, json=data,
+        f"{settings.API_V1_STR}/admin/users/",
+        headers=superuser_token_headers,
+        json=data,
     )
     assert 200 <= r.status_code < 300
     created_user = r.json()
@@ -50,13 +53,14 @@ def test_create_user_new_email(
 def test_get_existing_user(
     client: TestClient, superuser_token_headers: dict, db: Session
 ) -> None:
+    username = random_lower_string()
     email = random_email()
     password = random_lower_string()
-    user_in = UserCreate(username=email, email=email, password=password)
+    user_in = UserCreate(username=username, email=email, password=password)
     user = crud.user.create(db, obj_in=user_in)
     user_id = user.id
     r = client.get(
-        f"{settings.API_V1_STR}/users/{user_id}", headers=superuser_token_headers,
+        f"{settings.API_V1_STR}/admin/users/{user_id}", headers=superuser_token_headers,
     )
     assert 200 <= r.status_code < 300
     api_user = r.json()
@@ -68,27 +72,38 @@ def test_get_existing_user(
 def test_create_user_existing_username(
     client: TestClient, superuser_token_headers: dict, db: Session
 ) -> None:
+    username = random_lower_string()
     email = random_email()
     password = random_lower_string()
-    user_in = UserCreate(username=email, email=email, password=password)
+    user_in = UserCreate(username=username, email=email, password=password)
     crud.user.create(db, obj_in=user_in)
     data = {"username": email, "email": email, "password": password}
     r = client.post(
-        f"{settings.API_V1_STR}/users/", headers=superuser_token_headers, json=data,
+        f"{settings.API_V1_STR}/admin/users/",
+        headers=superuser_token_headers,
+        json=data,
     )
     created_user = r.json()
     assert r.status_code == 400
     assert "_id" not in created_user
 
 
-def test_create_user_by_normal_user(
+def test_create_admin_user_by_normal_user(
     client: TestClient, normal_user_token_headers: Dict[str, str]
 ) -> None:
+    username = random_lower_string()
     email = random_email()
     password = random_lower_string()
-    data = {"username": email, "email": email, "password": password}
+    data = {
+        "username": username,
+        "email": email,
+        "password": password,
+        "is_superuser": True,
+    }
     r = client.post(
-        f"{settings.API_V1_STR}/users/", headers=normal_user_token_headers, json=data,
+        f"{settings.API_V1_STR}/admin/users/",
+        headers=normal_user_token_headers,
+        json=data,
     )
     assert r.status_code == 400
 
@@ -96,17 +111,21 @@ def test_create_user_by_normal_user(
 def test_retrieve_users(
     client: TestClient, superuser_token_headers: dict, db: Session
 ) -> None:
+    username = random_lower_string()
     email = random_email()
     password = random_lower_string()
-    user_in = UserCreate(username=email, email=email, password=password)
+    user_in = UserCreate(username=username, email=email, password=password)
     crud.user.create(db, obj_in=user_in)
 
+    username2 = random_lower_string()
     email2 = random_email()
     password2 = random_lower_string()
-    user_in2 = UserCreate(username=email2, email=email2, password=password2)
+    user_in2 = UserCreate(username=username2, email=email2, password=password2)
     crud.user.create(db, obj_in=user_in2)
 
-    r = client.get(f"{settings.API_V1_STR}/users/", headers=superuser_token_headers)
+    r = client.get(
+        f"{settings.API_V1_STR}/admin/users/", headers=superuser_token_headers
+    )
     all_users = r.json()
 
     assert len(all_users) > 1
