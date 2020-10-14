@@ -1,4 +1,3 @@
-import uuid
 from typing import Any, List
 
 import aioredis
@@ -47,28 +46,20 @@ async def create_user(
     return user
 
 
-@router.get("/{user_id}", response_model=schemas.User)
+@router.get("/{id}", response_model=schemas.User)
 async def read_user_by_id(
-    user_id: uuid.UUID,
-    db: Session = Depends(deps.get_db),
-    redis: aioredis.Redis = Depends(deps.get_redis),
+    user: schemas.UserInDB = Depends(deps.get_user_by_id),
 ) -> Any:
     """
     Get a specific user by id.
     """
-    user = await crud.user_cachedb.get(db, redis, id=user_id)
-    if user is None:
-        raise HTTPException(
-            status_code=404,
-            detail="The user with this id does not exist in the system",
-        )
     return user
 
 
-@router.put("/{user_id}", response_model=schemas.User)
+@router.put("/{id}", response_model=schemas.User)
 async def update_user(
     *,
-    user_id: uuid.UUID,
+    user: schemas.UserInDB = Depends(deps.get_user_by_id),
     user_in: schemas.UserUpdate,
     db: Session = Depends(deps.get_db),
     redis: aioredis.Redis = Depends(deps.get_redis),
@@ -76,11 +67,7 @@ async def update_user(
     """
     Update a user.
     """
-    user = await crud.user_cachedb.get(db, redis, id=user_id)
-    if user is None:
-        raise HTTPException(
-            status_code=404,
-            detail="The user with this id does not exist in the system",
-        )
-    user = await crud.user_cachedb.update(db, redis, cache_obj=user, obj_in=user_in)
-    return user
+    updated_user = await crud.user_cachedb.update(
+        db, redis, cache_obj=user, obj_in=user_in
+    )
+    return updated_user

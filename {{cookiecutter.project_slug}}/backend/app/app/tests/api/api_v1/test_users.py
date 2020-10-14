@@ -15,7 +15,7 @@ def test_get_user_by_superuser(
     client: TestClient, superuser_token_headers: Dict[str, str]
 ) -> None:
     response = client.get(
-        f"{settings.API_V1_STR}/users", headers=superuser_token_headers
+        f"{settings.API_V1_STR}/users/", headers=superuser_token_headers
     )
     current_user = response.json()
     assert current_user
@@ -179,7 +179,7 @@ def test_retrieve_users(
     client: TestClient, superuser_token_headers: Dict[str, str], new_user: User
 ) -> None:
     response = client.get(
-        f"{settings.API_V1_STR}/admin/users", headers=superuser_token_headers,
+        f"{settings.API_V1_STR}/admin/users/", headers=superuser_token_headers,
     )
     response.raise_for_status()
     all_users = response.json()
