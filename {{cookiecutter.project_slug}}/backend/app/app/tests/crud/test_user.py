@@ -7,7 +7,12 @@ from sqlalchemy.orm import Session
 from app import crud
 from app.core.security import verify_password
 from app.models import User
-from app.schemas.user import UserCreate, UserUpdate
+from app.schemas.user import (
+    UnprivilegedUserCreate,
+    UnprivilegedUserUpdate,
+    UserCreate,
+    UserUpdate,
+)
 from app.tests.utils.utils import random_email, random_lower_string
 
 
@@ -135,8 +140,12 @@ def test_create_user_with_empty_password_is_not_allowed():
     email = random_email()
     with pytest.raises(ValidationError):
         UserCreate(username=username, email=email, password=None)
+    with pytest.raises(ValidationError):
+        UnprivilegedUserCreate(username=username, email=email, password=None)
 
 
 def test_update_user_password_to_empty_is_not_allowed():
     with pytest.raises(ValidationError):
         UserUpdate(password=None)
+    with pytest.raises(ValidationError):
+        UnprivilegedUserUpdate(password=None)
