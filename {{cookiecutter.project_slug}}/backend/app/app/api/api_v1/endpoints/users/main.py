@@ -1,5 +1,4 @@
-import uuid
-from typing import Any, List
+from typing import Any
 
 import aioredis
 from fastapi import APIRouter, Depends, HTTPException
@@ -68,4 +67,3 @@ async def create_user_open(
         send_new_account_email(
             email_to=user_in.email, username=user_in.email, password=user_in.password
         )
-
