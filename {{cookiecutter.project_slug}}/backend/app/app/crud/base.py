@@ -33,8 +33,12 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return db.query(self.model).offset(skip).limit(limit).all()
 
     def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
-        obj_in_data = jsonable_encoder(obj_in)
-        db_obj = self.model(**obj_in_data)  # type: ignore
+        # obj_in_data = jsonable_encoder(obj_in)
+        # return self.create_raw(db, create_data=obj_in_data)
+        return self.create_raw(db, create_data=obj_in.dict())
+
+    def create_raw(self, db: Session, *, create_data: Dict[str, Any]) -> ModelType:
+        db_obj = self.model(**create_data)  # type: ignore
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
@@ -47,11 +51,16 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db_obj: ModelType,
         obj_in: Union[UpdateSchemaType, Dict[str, Any]],
     ) -> ModelType:
-        obj_data = jsonable_encoder(db_obj)
         if isinstance(obj_in, dict):
             update_data = obj_in
         else:
             update_data = obj_in.dict(exclude_unset=True)
+        return self.update_raw(db, db_obj=db_obj, update_data=update_data)
+
+    def update_raw(
+        self, db: Session, *, db_obj: ModelType, update_data: Dict[str, Any],
+    ) -> ModelType:
+        obj_data = jsonable_encoder(db_obj)
         for field in obj_data:
             if field in update_data:
                 setattr(db_obj, field, update_data[field])
@@ -88,6 +97,9 @@ class CRUDCacheBase(Generic[CacheSchemaType]):
         self.tablename = tablename if tablename is not None else schema.__name__.lower()
         self.change_limit = change_limit
 
+    def build(self, data: Any) -> CacheSchemaType:
+        return self.schema.from_orm(data)
+
     def to_key(self, id: Union[int, str]) -> str:
         return f"{self.tablename}:{id}"
 
@@ -98,12 +110,16 @@ class CRUDCacheBase(Generic[CacheSchemaType]):
         return await cache.exists(self.to_key(id))
 
     async def add(
-        self, cache: Redis, *, obj_in: CacheSchemaType, expire: Optional[int] = None
+        self, cache: Redis, *, obj_in: CacheSchemaType, expire: Optional[int] = None,
     ) -> CacheSchemaType:
         record_key = self.to_key(obj_in.id)
-        record = self.schema.from_orm(obj_in)
-        await cache.set(record_key, record.json(), expire=expire)
-        return record
+        await cache.set(record_key, obj_in.json(), expire=expire)
+        return obj_in
+
+    async def add_model(
+        self, cache: Redis, *, obj_in: Any, expire: Optional[int] = None,
+    ) -> CacheSchemaType:
+        return await self.add(cache, obj_in=self.build(obj_in), expire=expire)
 
     async def add_changes(
         self, cache: Redis, *, obj: CacheSchemaType
@@ -131,12 +147,13 @@ class CRUDCacheBase(Generic[CacheSchemaType]):
         cache_obj: CacheSchemaType,
         obj_in: Union[CacheSchemaType, Dict[str, Any]],
     ) -> CacheSchemaType:
+        data = cache_obj.dict()
         if isinstance(obj_in, dict):
-            update_data = obj_in
+            data.update(obj_in)
         else:
-            update_data = obj_in.dict(exclude_unset=True)
+            data.update(obj_in.dict(exclude_unset=True))
+        record = self.schema(**data)
         record_key = self.to_key(cache_obj.id)
-        record = self.schema(**{**cache_obj.dict(), **update_data})
         await cache.set(record_key, record.json())
         return record
 
@@ -163,7 +180,7 @@ class CRUDCacheDBBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaTyp
         if result is None:
             search_result = self.crud_db.get(db, id)
             if search_result is not None:
-                result = await self.crud_cache.add(cache, obj_in=search_result)
+                result = await self.crud_cache.add_model(cache, obj_in=search_result)
         return result
 
     async def load(
@@ -174,15 +191,23 @@ class CRUDCacheDBBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaTyp
         for record in records:
             exists = await self.crud_cache.exists(cache=cache, id=record.id)
             if not exists:
-                coros.append(self.crud_cache.add(cache, obj_in=record))
+                coros.append(self.crud_cache.add_model(cache, obj_in=record))
         return await asyncio.gather(*coros)
 
     async def create(
         self, db: Session, cache: Redis, *, obj_in: CreateSchemaType
     ) -> CacheSchemaType:
-        # TODO: how can cache be updated first
-        db_obj = self.crud_db.create(db, obj_in=obj_in)
-        return await self.crud_cache.add(cache, obj_in=db_obj)
+        result = await self.crud_cache.add_model(cache, obj_in=obj_in)
+        self.crud_db.create(db, obj_in=obj_in)
+        return result
+
+    async def create_raw(
+        self, db: Session, cache: Redis, *, obj_in: CreateSchemaType
+    ) -> CacheSchemaType:
+        creating_obj = self.crud_cache.build(obj_in)
+        result = await self.crud_cache.add(cache, obj_in=creating_obj)
+        self.crud_db.create_raw(db, create_data=creating_obj.dict())
+        return result
 
     async def update(
         self,
@@ -197,6 +222,21 @@ class CRUDCacheDBBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaTyp
         )
         model = self.crud_db.get(db, cache_obj.id)
         self.crud_db.update(db, db_obj=model, obj_in=obj_in)
+        return result
+
+    async def update_raw(
+        self,
+        db: Session,
+        cache: Redis,
+        *,
+        cache_obj: CacheSchemaType,
+        obj_in: Dict[str, Any],
+    ) -> CacheSchemaType:
+        result = await self.crud_cache.update(
+            cache=cache, cache_obj=cache_obj, obj_in=obj_in
+        )
+        model = self.crud_db.get(db, cache_obj.id)
+        self.crud_db.update_raw(db, db_obj=model, update_data=obj_in)
         return result
 
     async def remove(self, db: Session, cache: Redis, *, id: Any) -> CacheSchemaType:

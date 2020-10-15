@@ -1,3 +1,4 @@
+import uuid
 from typing import Generator
 
 import aioredis
@@ -9,7 +10,7 @@ from jose import jwt
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app import crud, schemas
+from app import crud, models, schemas
 from app.core import security
 from app.core.config import settings
 from app.db.session import SessionLocal
@@ -63,10 +64,40 @@ def get_current_active_user(
 
 
 def get_current_active_superuser(
-    current_user: schemas.UserInDB = Depends(get_current_user),
+    current_user: schemas.UserInDB = Depends(get_current_active_user),
 ) -> schemas.UserInDB:
     if not current_user.is_superuser:
         raise HTTPException(
             status_code=400, detail="The user doesn't have enough privileges"
         )
     return current_user
+
+
+async def get_user_by_id(
+    id: uuid.UUID,
+    db: Session = Depends(get_db),
+    redis: aioredis.Redis = Depends(get_redis),
+) -> schemas.UserInDB:
+    user = await crud.user_cachedb.get(db, redis, id=id)
+    if user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="The user with this id does not exist in the system",
+        )
+    return user
+
+
+def get_item_by_id(id: int, db: Session = Depends(get_db),) -> models.Item:
+    item = crud.item.get(db=db, id=id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return item
+
+
+def get_owned_item_by_id(
+    item: models.Item = Depends(get_item_by_id),
+    current_user: schemas.UserInDB = Depends(get_current_active_user),
+) -> models.Item:
+    if item.owner_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return item

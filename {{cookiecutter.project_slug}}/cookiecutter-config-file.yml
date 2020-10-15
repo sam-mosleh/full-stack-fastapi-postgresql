@@ -6,7 +6,8 @@ default_context:
   docker_swarm_stack_name_main: '{{ cookiecutter.docker_swarm_stack_name_main }}'
   docker_swarm_stack_name_staging: '{{ cookiecutter.docker_swarm_stack_name_staging }}'
   secret_key: '{{ cookiecutter.secret_key }}'
-  first_superuser: '{{ cookiecutter.first_superuser }}'
+  first_superuser_username: '{{ cookiecutter.first_superuser_username }}'
+  first_superuser_email: '{{ cookiecutter.first_superuser_email }}'
   first_superuser_password: '{{ cookiecutter.first_superuser_password }}'
   backend_cors_origins: '{{ cookiecutter.backend_cors_origins }}'
   smtp_port: '{{ cookiecutter.smtp_port }}'
@@ -26,5 +27,6 @@ default_context:
   docker_image_backend: '{{ cookiecutter.docker_image_backend }}'
   docker_image_celeryworker: '{{ cookiecutter.docker_image_celeryworker }}'
   docker_image_frontend: '{{ cookiecutter.docker_image_frontend }}'
+  docker_image_pusher: '{{ cookiecutter.docker_image_pusher }}'
   _copy_without_render: [frontend/src/**/*.html, frontend/src/**/*.vue, frontend/node_modules/*, backend/app/app/email-templates/**]
   _template: ./

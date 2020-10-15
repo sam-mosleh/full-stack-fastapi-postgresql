@@ -99,7 +99,8 @@ The input variables, with their default values (some auto generated) are:
 * `docker_swarm_stack_name_staging`: The name of the stack while deploying to Docker in Swarm mode for staging. By default, based on the domain.
 
 * `secret_key`: Backend server secret key. Use the method above to generate it.
-* `first_superuser`: The first superuser generated, with it you will be able to create more users, etc. By default, based on the domain.
+* `first_superuser_username`: The first superuser generated, with it you will be able to create more users, etc. By default, based on the project name.
+* `first_superuser_email`: First superuser email.
 * `first_superuser_password`: First superuser password. Use the method above to generate it.
 * `backend_cors_origins`: Origins (domains, more or less) that are enabled for CORS (Cross Origin Resource Sharing). This allows a frontend in one domain (e.g. `https://dashboard.example.com`) to communicate with this backend, that could be living in another domain (e.g. `https://api.example.com`). It can also be used to allow your local frontend (with a custom `hosts` domain mapping, as described in the project's `README.md`) that could be living in `http://dev.example.com:8080` to communicate with the backend at `https://stag.example.com`. Notice the `http` vs `https` and the `dev.` prefix for local development vs the "staging" `stag.` prefix. By default, it includes origins for production, staging and development, with ports commonly used during local development by several popular frontend frameworks (Vue with `:8080`, React, Angular).
 * `smtp_port`: Port to use to send emails via SMTP. By default `587`.
@@ -116,7 +117,7 @@ The input variables, with their default values (some auto generated) are:
 * `traefik_constraint_tag_staging`: The Traefik tag to be used while on staging.
 * `traefik_public_constraint_tag`: The tag that should be used by stack services that should communicate with the public.
 
-* `flower_auth`: Basic HTTP authentication for flower, in the form`user:password`. By default: "`admin:changethis`".
+* `flower_auth`: Basic HTTP authentication for flower, in the form`user:password`.
 
 * `sentry_dsn`: Key URL (DSN) of Sentry, for live error reporting. You can use the open source version or a free account. E.g.: `https://1234abcd:5678ef@sentry.example.com/30`.
 

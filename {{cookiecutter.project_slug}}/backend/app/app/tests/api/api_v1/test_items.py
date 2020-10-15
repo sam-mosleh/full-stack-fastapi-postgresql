@@ -32,4 +32,4 @@ def test_read_item(
     assert content["title"] == item.title
     assert content["description"] == item.description
     assert content["id"] == item.id
-    assert content["owner_id"] == item.owner_id
+    assert content["owner_id"] == str(item.owner_id)
