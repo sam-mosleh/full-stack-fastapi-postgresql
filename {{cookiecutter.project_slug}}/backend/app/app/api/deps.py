@@ -1,5 +1,5 @@
 import uuid
-from typing import Generator
+from typing import Generator, Optional
 
 import aioredis
 import aioredlock
@@ -79,6 +79,22 @@ async def get_user_by_id(
     redis: aioredis.Redis = Depends(get_redis),
 ) -> schemas.UserInDB:
     user = await crud.user_cachedb.get(db, redis, id=id)
+    if user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="The user with this id does not exist in the system",
+        )
+    return user
+
+
+async def get_owner_by_id(
+    owner_id: Optional[uuid.UUID] = None,
+    db: Session = Depends(get_db),
+    redis: aioredis.Redis = Depends(get_redis),
+) -> Optional[schemas.UserInDB]:
+    if owner_id is None:
+        return None
+    user = await crud.user_cachedb.get(db, redis, id=owner_id)
     if user is None:
         raise HTTPException(
             status_code=404,
