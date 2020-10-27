@@ -5,6 +5,8 @@ from starlette.middleware.cors import CORSMiddleware
 
 from app.api.api_v1.api import api_router
 from app.core.config import settings
+from app.db.session import SessionLocal
+from app import crud
 
 app = FastAPI(
     title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_STR}/openapi.json"
@@ -27,10 +29,13 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 async def on_startup() -> None:
     app.state.redis = await aioredis.create_redis_pool(settings.APP_REDIS_DSN)
     app.state.lock = aioredlock.Aioredlock([app.state.redis])
+    db = SessionLocal()
+    await crud.user_cachedb.load(db, app.state.redis)
+    db.close()
 
 
 @app.on_event("shutdown")
 async def on_shutdown() -> None:
+    await app.state.lock.destroy()
     app.state.redis.close()
     await app.state.redis.wait_closed()
-    await app.state.lock.destroy()
