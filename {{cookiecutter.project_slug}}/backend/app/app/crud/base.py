@@ -1,5 +1,5 @@
 from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
-
+import asyncio
 from aioredis import Redis
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
@@ -34,10 +34,10 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
         # obj_in_data = jsonable_encoder(obj_in)
-        # return self.create_raw(db, create_data=obj_in_data)
-        return self.create_raw(db, create_data=obj_in.dict())
+        # return self.create_dict(db, create_data=obj_in_data)
+        return self.create_dict(db, create_data=obj_in.dict())
 
-    def create_raw(self, db: Session, *, create_data: Dict[str, Any]) -> ModelType:
+    def create_dict(self, db: Session, *, create_data: Dict[str, Any]) -> ModelType:
         db_obj = self.model(**create_data)  # type: ignore
         db.add(db_obj)
         db.commit()
@@ -55,9 +55,9 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             update_data = obj_in
         else:
             update_data = obj_in.dict(exclude_unset=True)
-        return self.update_raw(db, db_obj=db_obj, update_data=update_data)
+        return self.update_dict(db, db_obj=db_obj, update_data=update_data)
 
-    def update_raw(
+    def update_dict(
         self, db: Session, *, db_obj: ModelType, update_data: Dict[str, Any],
     ) -> ModelType:
         obj_data = jsonable_encoder(db_obj)
@@ -86,7 +86,7 @@ class OrmMode(BaseModel):
 CacheSchemaType = TypeVar("CacheSchemaType", bound=OrmMode)
 
 
-class CRUDCacheBase(Generic[CacheSchemaType]):
+class CRUDCacheBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaType]):
     def __init__(
         self,
         schema: Type[CacheSchemaType],
@@ -116,10 +116,11 @@ class CRUDCacheBase(Generic[CacheSchemaType]):
         await cache.set(record_key, obj_in.json(), expire=expire)
         return obj_in
 
-    async def add_model(
-        self, cache: Redis, *, obj_in: Any, expire: Optional[int] = None,
+    async def add_dict(
+        self, cache: Redis, *, obj_in: Dict[str, Any], expire: Optional[int] = None,
     ) -> CacheSchemaType:
-        return await self.add(cache, obj_in=self.build(obj_in), expire=expire)
+        record = self.schema(**obj_in)
+        return await self.add(cache, obj_in=record, expire=expire)
 
     async def add_changes(
         self, cache: Redis, *, obj: CacheSchemaType
@@ -140,22 +141,30 @@ class CRUDCacheBase(Generic[CacheSchemaType]):
         json_list = await cache.lrange(change_list_key, 0, limit - 1, encoding="utf-8")
         return [self.schema.parse_raw(record) for record in json_list]
 
+    async def add_model(
+        self, cache: Redis, *, obj_in: Any, expire: Optional[int] = None,
+    ) -> CacheSchemaType:
+        return await self.add(cache, obj_in=self.build(obj_in), expire=expire)
+
+    async def create(
+        self, cache: Redis, *, obj_in: CreateSchemaType, expire: Optional[int] = None,
+    ) -> CacheSchemaType:
+        return await self.add_dict(cache, obj_in=obj_in.dict(), expire=expire)
+
     async def update(
         self,
         cache: Redis,
         *,
         cache_obj: CacheSchemaType,
-        obj_in: Union[CacheSchemaType, Dict[str, Any]],
+        obj_in: Union[UpdateSchemaType, Dict[str, Any]],
+        expire: Optional[int] = None,
     ) -> CacheSchemaType:
         data = cache_obj.dict()
         if isinstance(obj_in, dict):
             data.update(obj_in)
         else:
             data.update(obj_in.dict(exclude_unset=True))
-        record = self.schema(**data)
-        record_key = self.to_key(cache_obj.id)
-        await cache.set(record_key, record.json())
-        return record
+        return await self.add_dict(cache, obj_in=data, expire=expire)
 
     async def remove(self, cache: Redis, *, id: Any) -> Optional[CacheSchemaType]:
         record = await self.get(cache=cache, id=id)
@@ -197,16 +206,14 @@ class CRUDCacheDBBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaTyp
     async def create(
         self, db: Session, cache: Redis, *, obj_in: CreateSchemaType
     ) -> CacheSchemaType:
-        result = await self.crud_cache.add_model(cache, obj_in=obj_in)
-        self.crud_db.create(db, obj_in=obj_in)
-        return result
+        obj_data = obj_in.dict()
+        return await self.create_dict(db, cache, obj_in=obj_data)
 
-    async def create_raw(
-        self, db: Session, cache: Redis, *, obj_in: CreateSchemaType
+    async def create_dict(
+        self, db: Session, cache: Redis, *, obj_in: Dict[str, Any]
     ) -> CacheSchemaType:
-        creating_obj = self.crud_cache.build(obj_in)
-        result = await self.crud_cache.add(cache, obj_in=creating_obj)
-        self.crud_db.create_raw(db, create_data=creating_obj.dict())
+        result = await self.crud_cache.add_dict(cache, obj_in=obj_in)
+        self.crud_db.create_dict(db, create_data=obj_in)
         return result
 
     async def update(
@@ -217,14 +224,15 @@ class CRUDCacheDBBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaTyp
         cache_obj: CacheSchemaType,
         obj_in: Union[UpdateSchemaType, Dict[str, Any]],
     ) -> CacheSchemaType:
-        result = await self.crud_cache.update(
-            cache=cache, cache_obj=cache_obj, obj_in=obj_in
+        if isinstance(obj_in, dict):
+            update_data = obj_in
+        else:
+            update_data = obj_in.dict(exclude_unset=True)
+        return await self.update_dict(
+            db, cache, cache_obj=cache_obj, obj_in=update_data
         )
-        model = self.crud_db.get(db, cache_obj.id)
-        self.crud_db.update(db, db_obj=model, obj_in=obj_in)
-        return result
 
-    async def update_raw(
+    async def update_dict(
         self,
         db: Session,
         cache: Redis,
@@ -232,11 +240,11 @@ class CRUDCacheDBBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaTyp
         cache_obj: CacheSchemaType,
         obj_in: Dict[str, Any],
     ) -> CacheSchemaType:
-        result = await self.crud_cache.update(
-            cache=cache, cache_obj=cache_obj, obj_in=obj_in
-        )
+        data = cache_obj.dict()
+        data.update(obj_in)
+        result = await self.crud_cache.add_dict(cache, obj_in=data)
         model = self.crud_db.get(db, cache_obj.id)
-        self.crud_db.update_raw(db, db_obj=model, update_data=obj_in)
+        self.crud_db.update_dict(db, db_obj=model, update_data=obj_in)
         return result
 
     async def remove(self, db: Session, cache: Redis, *, id: Any) -> CacheSchemaType:
