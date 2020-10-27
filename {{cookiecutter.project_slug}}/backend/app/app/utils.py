@@ -1,13 +1,14 @@
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 import emails
 from emails.template import JinjaTemplate
 from jose import jwt
 
 from app.core.config import settings
+from app.core.sms import sms_client
 
 
 def send_email(
@@ -104,3 +105,11 @@ def verify_password_reset_token(token: str) -> Optional[str]:
         return decoded_token["sub"]
     except jwt.JWTError:
         return None
+
+
+async def send_verification_code(mobile_no: str, code: Union[int, str]) -> int:
+    return await sms_client.send(
+        mobile_no,
+        template_id=settings.SMS_TEMPLATE_ID,
+        params={"VerificationCode": code},
+    )

@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 from pydantic.networks import EmailStr
 
 from app import schemas
@@ -8,7 +8,7 @@ from app.api import deps
 from app.core.celery_app import celery_app
 from app.core.socket import external_sio
 from app.pusher.namespaces import user_namespace
-from app.utils import send_test_email
+from app.utils import send_test_email, send_verification_code
 
 router = APIRouter()
 
@@ -47,3 +47,15 @@ async def test_socket(
     """
     await user_namespace.emit_private(external_sio, current_user.id, msg.msg)
     return {"msg": "Sent"}
+
+
+@router.post("/test-sms/", response_model=schemas.Msg)
+async def test_sms(
+    mobile: str = Body(...),
+    data: str = Body(...),
+    current_user: schemas.UserInDB = Depends(deps.get_current_active_superuser),
+) -> Any:
+    """
+    Test sending SMS verification code.
+    """
+    return {"msg": await send_verification_code(mobile, data)}

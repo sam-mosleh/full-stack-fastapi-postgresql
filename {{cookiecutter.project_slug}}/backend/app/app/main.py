@@ -6,6 +6,7 @@ from starlette.middleware.cors import CORSMiddleware
 from app import crud
 from app.api.api_v1.api import api_router
 from app.core.config import settings
+from app.core.sms import sms_client
 from app.db.session import SessionLocal
 
 app = FastAPI(
@@ -32,10 +33,12 @@ async def on_startup() -> None:
     db = SessionLocal()
     await crud.user_cachedb.load(db, app.state.redis)
     db.close()
+    await sms_client.start()
 
 
 @app.on_event("shutdown")
 async def on_shutdown() -> None:
+    await sms_client.close()
     await app.state.lock.destroy()
     app.state.redis.close()
     await app.state.redis.wait_closed()

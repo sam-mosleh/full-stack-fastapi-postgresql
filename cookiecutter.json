@@ -22,6 +22,10 @@
     "pgadmin_default_user": "{{cookiecutter.first_superuser_username}}",
     "pgadmin_default_user_password": "{{cookiecutter.first_superuser_password}}",
 
+    "sms_api_key": "",
+    "sms_secret_key": "",
+    "sms_template_id": "",
+
     "traefik_constraint_tag": "{{cookiecutter.domain_main}}",
     "traefik_constraint_tag_staging": "{{cookiecutter.domain_staging}}",
     "traefik_public_constraint_tag": "traefik-public",

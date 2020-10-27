@@ -157,6 +157,10 @@ class Settings(BaseSettings):
 
     PUSHER_USER_NAMESPACE: str = "/user"
 
+    SMS_API_KEY: Optional[str] = None
+    SMS_SECRET_KEY: Optional[str] = None
+    SMS_TEMPLATE_ID: Optional[int] = None
+
     class Config:
         case_sensitive = True
 
