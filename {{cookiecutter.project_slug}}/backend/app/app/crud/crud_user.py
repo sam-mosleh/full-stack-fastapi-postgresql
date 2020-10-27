@@ -20,11 +20,10 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
     def create(
         self, db: Session, *, obj_in: UserCreate, id: Optional[uuid.UUID] = None
     ) -> User:
-        user_id = id or uuid.uuid4()
         obj_in_data = obj_in.dict(exclude={"password"})
         obj_in_data["hashed_password"] = get_password_hash(obj_in.password)
-        obj_in_data["id"] = user_id
-        return self.create_raw(db, create_data=obj_in_data)
+        obj_in_data["id"] = id or uuid.uuid4()
+        return self.create_dict(db, create_data=obj_in_data)
 
     def update(
         self, db: Session, *, db_obj: User, obj_in: Union[UserUpdate, Dict[str, Any]]
@@ -36,7 +35,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         if "password" in update_data:
             update_data["hashed_password"] = get_password_hash(update_data["password"])
             del update_data["password"]
-        return self.update_raw(db, db_obj=db_obj, update_data=update_data)
+        return self.update_dict(db, db_obj=db_obj, update_data=update_data)
 
     def authenticate(
         self, db: Session, *, username: str, password: str
@@ -49,21 +48,23 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         return user
 
 
-class CRUDCacheUser(CRUDCacheBase[UserInDB]):
+class CRUDCacheUser(CRUDCacheBase[UserInDB, UserCreate, UserUpdate]):
     pass
 
 
 class CRUDCacheDBUser(CRUDCacheDBBase[UserInDB, UserCreate, UserUpdate]):
     async def create(
-        self, db: Session, cache: aioredis.Redis, *, obj_in: UserCreate
+        self,
+        db: Session,
+        cache: aioredis.Redis,
+        *,
+        obj_in: UserCreate,
+        id: Optional[uuid.UUID] = None,
     ) -> UserInDB:
-        hashed_password = get_password_hash(obj_in.password)
-        data_obj = UserInDB(
-            id=uuid.uuid4(),
-            hashed_password=hashed_password,
-            **obj_in.dict(exclude_unset=True),
-        )
-        return await self.create_raw(db, cache, obj_in=data_obj)
+        obj_in_data = obj_in.dict(exclude={"password"})
+        obj_in_data["hashed_password"] = get_password_hash(obj_in.password)
+        obj_in_data["id"] = id or uuid.uuid4()
+        return await self.create_dict(db, cache, obj_in=obj_in_data)
 
     async def update(
         self,
@@ -80,7 +81,9 @@ class CRUDCacheDBUser(CRUDCacheDBBase[UserInDB, UserCreate, UserUpdate]):
         if "password" in update_data:
             update_data["hashed_password"] = get_password_hash(update_data["password"])
             del update_data["password"]
-        return await self.update_raw(db, cache, cache_obj=cache_obj, obj_in=update_data)
+        return await self.update_dict(
+            db, cache, cache_obj=cache_obj, obj_in=update_data
+        )
 
 
 user = CRUDUser(User)
