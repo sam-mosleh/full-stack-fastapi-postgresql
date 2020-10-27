@@ -61,15 +61,13 @@ def test_create_new_user_by_superuser(
     not settings.USERS_OPEN_REGISTRATION, reason="Open registration is provided"
 )
 def test_create_new_user_by_normal_user_with_open_registration(
-    client: TestClient, normal_user_token_headers: Dict[str, str], db: Session
+    client: TestClient, db: Session
 ) -> None:
     username = random_lower_string()
     email = random_email()
     password = random_lower_string()
     data = {"username": username, "email": email, "password": password}
-    response = client.post(
-        f"{settings.API_V1_STR}/users/", headers=normal_user_token_headers, json=data,
-    )
+    response = client.post(f"{settings.API_V1_STR}/users/", json=data)
     response.raise_for_status()
     created_user = response.json()
     user = crud.user.get_by_email(db, email=email)
@@ -82,15 +80,13 @@ def test_create_new_user_by_normal_user_with_open_registration(
     settings.USERS_OPEN_REGISTRATION, reason="Open registration is not provided"
 )
 def test_create_new_user_by_normal_user_without_open_registration(
-    client: TestClient, normal_user_token_headers: Dict[str, str], db: Session
+    client: TestClient, db: Session
 ) -> None:
     username = random_lower_string()
     email = random_email()
     password = random_lower_string()
     data = {"username": username, "email": email, "password": password}
-    response = client.post(
-        f"{settings.API_V1_STR}/users/", headers=normal_user_token_headers, json=data,
-    )
+    response = client.post(f"{settings.API_V1_STR}/users/", json=data)
     with pytest.raises(HTTPError):
         response.raise_for_status()
     content = response.json()

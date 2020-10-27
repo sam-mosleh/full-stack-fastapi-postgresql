@@ -53,6 +53,22 @@ class CRUDCacheUser(CRUDCacheBase[UserInDB, UserCreate, UserUpdate]):
 
 
 class CRUDCacheDBUser(CRUDCacheDBBase[UserInDB, UserCreate, UserUpdate]):
+    async def get_by_username(
+        self, db: Session, cache: aioredis.Redis, *, username: str
+    ) -> Optional[UserInDB]:
+        user = self.crud_db.get_by_username(db, username=username)
+        if user is None:
+            return None
+        return await self.crud_cache.get(cache, id=user.id)
+
+    async def get_by_email(
+        self, db: Session, cache: aioredis.Redis, *, email: str
+    ) -> Optional[UserInDB]:
+        user = self.crud_db.get_by_email(db, email=email)
+        if user is None:
+            return None
+        return await self.crud_cache.get(cache, id=user.id)
+
     async def create(
         self,
         db: Session,
@@ -84,6 +100,16 @@ class CRUDCacheDBUser(CRUDCacheDBBase[UserInDB, UserCreate, UserUpdate]):
         return await self.update_dict(
             db, cache, cache_obj=cache_obj, obj_in=update_data
         )
+
+    async def authenticate(
+        self, db: Session, cache: aioredis.Redis, *, username: str, password: str
+    ) -> Optional[UserInDB]:
+        user = await self.get_by_username(db, cache, username=username)
+        if user is None:
+            return None
+        if not verify_password(password, user.hashed_password):
+            return None
+        return user
 
 
 user = CRUDUser(User)
