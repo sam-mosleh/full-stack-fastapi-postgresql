@@ -1,5 +1,6 @@
-from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
 import asyncio
+from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
+
 from aioredis import Redis
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
