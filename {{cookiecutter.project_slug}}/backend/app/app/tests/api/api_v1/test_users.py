@@ -67,38 +67,34 @@ def test_create_new_user_by_superuser(
     assert user.email == created_user["email"]
 
 
-# @pytest.mark.skipif(
-#     not settings.USERS_OPEN_REGISTRATION, reason="Open registration is provided"
-# )
-@pytest.mark.skip(reason="API is changed")
+@pytest.mark.skipif(
+    not settings.USERS_OPEN_REGISTRATION, reason="Open registration is not provided"
+)
 def test_create_new_user_by_normal_user_with_open_registration(
     client: TestClient, db: Session
 ) -> None:
-    username = random_lower_string()
-    email = random_email()
-    password = random_lower_string()
-    data = {"username": username, "email": email, "password": password}
-    response = client.post(f"{settings.API_V1_STR}/users/", json=data)
+    mobile = random_mobile_number()
+    data = {"mobile": mobile}
+    response = client.post(f"{settings.API_V1_STR}/users/registrations/", json=data)
     response.raise_for_status()
-    created_user = response.json()
-    user = crud.user.get_by_email(db, email=email)
-    assert user
-    assert user.username == created_user["username"]
-    assert user.email == created_user["email"]
+    registration = response.json()
+    assert registration
+    assert "id" in registration
+    assert registration["mobile"] == mobile
 
 
-# @pytest.mark.skipif(
-#     settings.USERS_OPEN_REGISTRATION, reason="Open registration is not provided"
-# )
-@pytest.mark.skip(reason="API is changed")
+# TODO: add registration tests
+
+
+@pytest.mark.skipif(
+    settings.USERS_OPEN_REGISTRATION, reason="Open registration is provided"
+)
 def test_create_new_user_by_normal_user_without_open_registration(
     client: TestClient, db: Session
 ) -> None:
-    username = random_lower_string()
-    email = random_email()
-    password = random_lower_string()
-    data = {"username": username, "email": email, "password": password}
-    response = client.post(f"{settings.API_V1_STR}/users/", json=data)
+    mobile = random_mobile_number()
+    data = {"mobile": mobile}
+    response = client.post(f"{settings.API_V1_STR}/users/registrations/", json=data)
     with pytest.raises(HTTPError):
         response.raise_for_status()
     content = response.json()
