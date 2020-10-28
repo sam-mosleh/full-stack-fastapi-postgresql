@@ -53,6 +53,7 @@ class UserCreate(UserBase):
 class UserUpdate(UserBase):
     username: Optional[str] = None
     email: Optional[str] = None
+    mobile: Optional[str] = None
     password: Optional[str] = None
 
     @validator("username")

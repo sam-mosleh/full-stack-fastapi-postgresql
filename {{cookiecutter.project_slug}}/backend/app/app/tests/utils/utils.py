@@ -15,6 +15,10 @@ def random_email() -> str:
     return f"{random_lower_string()}@{random_lower_string()}.com"
 
 
+def random_mobile_number() -> str:
+    return f"+989{random.randint(100000000, 999999999)}"
+
+
 def get_superuser_token_headers(client: TestClient) -> Dict[str, str]:
     login_data = {
         "username": settings.FIRST_SUPERUSER_USERNAME,

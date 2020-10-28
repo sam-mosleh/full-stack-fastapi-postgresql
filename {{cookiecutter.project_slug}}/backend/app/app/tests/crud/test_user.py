@@ -13,14 +13,21 @@ from app.schemas.user import (
     UserCreate,
     UserUpdate,
 )
-from app.tests.utils.utils import random_email, random_lower_string
+from app.tests.utils.utils import (
+    random_email,
+    random_lower_string,
+    random_mobile_number,
+)
 
 
 def test_create_user(db: Session) -> None:
     username = random_lower_string()
     email = random_email()
+    mobile = random_mobile_number()
     password = random_lower_string()
-    user_in = UserCreate(username=username, email=email, password=password)
+    user_in = UserCreate(
+        username=username, email=email, mobile=mobile, password=password
+    )
     user = crud.user.create(db, obj_in=user_in)
     assert user.username == username
     assert user.email == email
@@ -30,8 +37,11 @@ def test_create_user(db: Session) -> None:
 def test_authenticate_user(db: Session) -> None:
     username = random_lower_string()
     email = random_email()
+    mobile = random_mobile_number()
     password = random_lower_string()
-    user_in = UserCreate(username=username, email=email, password=password)
+    user_in = UserCreate(
+        username=username, email=email, mobile=mobile, password=password
+    )
     user = crud.user.create(db, obj_in=user_in)
     authenticated_user = crud.user.authenticate(
         db, username=username, password=password
@@ -55,9 +65,14 @@ def test_check_if_user_is_active(new_user: User) -> None:
 def test_check_if_user_is_inactive(db: Session) -> None:
     username = random_lower_string()
     email = random_email()
+    mobile = random_mobile_number()
     password = random_lower_string()
     user_in = UserCreate(
-        username=username, email=email, password=password, is_active=False
+        username=username,
+        email=email,
+        mobile=mobile,
+        password=password,
+        is_active=False,
     )
     user = crud.user.create(db, obj_in=user_in)
     assert not user.is_active
@@ -66,9 +81,14 @@ def test_check_if_user_is_inactive(db: Session) -> None:
 def test_check_if_user_is_superuser(db: Session) -> None:
     username = random_lower_string()
     email = random_email()
+    mobile = random_mobile_number()
     password = random_lower_string()
     user_in = UserCreate(
-        username=username, email=email, password=password, is_superuser=True
+        username=username,
+        email=email,
+        mobile=mobile,
+        password=password,
+        is_superuser=True,
     )
     user = crud.user.create(db, obj_in=user_in)
     assert user.is_superuser
@@ -101,8 +121,11 @@ def test_update_user(db: Session, new_user: User) -> None:
 async def test_cachedb_create_user(db: Session, redis: aioredis.Redis):
     username = random_lower_string()
     email = random_email()
+    mobile = random_mobile_number()
     password = random_lower_string()
-    user_in = UserCreate(username=username, email=email, password=password)
+    user_in = UserCreate(
+        username=username, email=email, mobile=mobile, password=password
+    )
     user = await crud.user_cachedb.create(db, redis, obj_in=user_in)
     db_user = crud.user.get(db, id=user.id)
     assert user.username == db_user.username == username
@@ -138,8 +161,9 @@ async def test_cachedb_update_user(db: Session, redis: aioredis.Redis, new_user:
 def test_create_user_with_empty_password_is_not_allowed():
     username = random_lower_string()
     email = random_email()
+    mobile = random_mobile_number()
     with pytest.raises(ValidationError):
-        UserCreate(username=username, email=email, password=None)
+        UserCreate(username=username, email=email, mobile=mobile, password=None)
     with pytest.raises(ValidationError):
         UnprivilegedUserCreate(username=username, email=email, password=None)
 
