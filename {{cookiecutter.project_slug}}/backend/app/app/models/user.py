@@ -14,6 +14,7 @@ class User(Base):
     id = Column(GUID, primary_key=True, index=True)
     username = Column(String, unique=True, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
+    mobile = Column(String, unique=True, index=True, nullable=False)
     full_name = Column(String, index=True)
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean())

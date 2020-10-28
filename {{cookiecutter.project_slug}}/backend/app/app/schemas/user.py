@@ -30,12 +30,22 @@ class UnprivilegedUserUpdate(UnprivilegedUserBase):
 
 # Shared properties
 class UserBase(UnprivilegedUserBase):
+    mobile: Optional[str] = None
     is_active: Optional[bool] = True
     is_superuser: Optional[bool] = False
+
+    @validator("mobile")
+    def valid_mobile_number(cls, v: Optional[str]):
+        if v is None:
+            return None
+        if len(v) == 13 and v[1:].isdigit() and v.startswith("+989"):
+            return v
+        raise ValueError("Mobile phone number must be like +989xxxxxxxxx")
 
 
 # Properties to receive via API on creation
 class UserCreate(UserBase):
+    mobile: str
     password: str
 
 
@@ -63,6 +73,7 @@ class UserUpdate(UserBase):
 
 class UserInDBBase(UserBase):
     id: uuid.UUID
+    mobile: str
 
     class Config:
         orm_mode = True
