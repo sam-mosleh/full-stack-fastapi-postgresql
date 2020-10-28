@@ -117,3 +117,28 @@ def get_owned_item_by_id(
     if item.owner_id != current_user.id:
         raise HTTPException(status_code=404, detail="Item not found")
     return item
+
+
+async def get_registration_by_id(
+    id: uuid.UUID, redis: aioredis.Redis = Depends(get_redis)
+) -> schemas.RegistrationInDB:
+    reg = await crud.registration_cache.get(redis, id=id)
+    if reg is None:
+        raise HTTPException(status_code=404, detail="Registration not found")
+    return reg
+
+
+def get_unverified_registration_by_id(
+    registration: schemas.RegistrationInDB = Depends(get_registration_by_id),
+) -> schemas.RegistrationInDB:
+    if registration.mobile_is_verified:
+        raise HTTPException(status_code=401, detail="Registration is verified")
+    return registration
+
+
+def get_verified_registration_by_id(
+    registration: schemas.RegistrationInDB = Depends(get_registration_by_id),
+) -> schemas.RegistrationInDB:
+    if not registration.mobile_is_verified:
+        raise HTTPException(status_code=401, detail="Registration is not verified")
+    return registration

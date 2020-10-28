@@ -1,13 +1,12 @@
 from typing import Any
 
 import aioredis
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app import crud, schemas
 from app.api import deps
-from app.core.config import settings
-from app.utils import send_new_account_email
+from app.api.api_v1.endpoints.users import registrations
 
 router = APIRouter()
 
@@ -40,30 +39,6 @@ def read_user_me(
     return current_user
 
 
-@router.post("/", response_model=schemas.User)
-async def create_user_open(
-    *,
-    user_in: schemas.UnprivilegedUserCreate,
-    db: Session = Depends(deps.get_db),
-    redis: aioredis.Redis = Depends(deps.get_redis),
-) -> Any:
-    """
-    Create new user without the need to be logged in.
-    """
-    if not settings.USERS_OPEN_REGISTRATION:
-        raise HTTPException(
-            status_code=403,
-            detail="Open user registration is forbidden on this server",
-        )
-    user = crud.user.get_by_email(db, email=user_in.email)
-    if user is not None:
-        raise HTTPException(
-            status_code=400,
-            detail="The user with this username already exists in the system",
-        )
-    user_in = schemas.UserCreate(user_in.dict(exclude_unset=True))
-    user = await crud.user_cachedb.create(db, redis, obj_in=user_in)
-    if settings.EMAILS_ENABLED and user_in.email:
-        send_new_account_email(
-            email_to=user_in.email, username=user_in.email, password=user_in.password
-        )
+router.include_router(
+    registrations.router, prefix="/registrations", tags=["registrations"]
+)
