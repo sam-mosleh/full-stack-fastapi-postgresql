@@ -1,7 +1,7 @@
 from .crud_item import item
-from .crud_user import user, user_cache, user_cachedb
 from .crud_otp import otp_cache
 from .crud_registration import registration_cache
+from .crud_user import user, user_cache, user_cachedb
 
 # For a new basic set of CRUD operations you could just do
 

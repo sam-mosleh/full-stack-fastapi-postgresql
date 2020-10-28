@@ -1,7 +1,6 @@
 import uuid
-from typing import Optional
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel
 
 
 class OTPBase(BaseModel):
@@ -32,3 +31,7 @@ class OTP(OTPInDBBase):
 class OTPInDB(OTPInDBBase):
     verification_id: int
     verification_code: int
+
+
+class OTPVerification(BaseModel):
+    code: int

@@ -1,13 +1,11 @@
 import uuid
-from typing import Any, Dict, Optional, Union
+from typing import Optional
 
 import aioredis
-from sqlalchemy.orm import Session
-
-from app.crud.base import CRUDBase, CRUDCacheBase, CRUDCacheDBBase
-from app.schemas.otp import OTPInDB, OTPCreate
 
 from app.core.config import settings
+from app.crud.base import CRUDCacheBase
+from app.schemas.otp import OTPCreate, OTPInDB
 
 
 class CRUDCacheOTP(CRUDCacheBase[OTPInDB, OTPCreate, OTPInDB]):

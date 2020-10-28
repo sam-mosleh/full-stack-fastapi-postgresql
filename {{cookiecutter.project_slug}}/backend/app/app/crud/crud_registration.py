@@ -1,17 +1,16 @@
 import uuid
-from typing import Any, Dict, Optional, Union
+from typing import Optional
 
 import aioredis
-from sqlalchemy.orm import Session
-
-from app.crud.base import CRUDBase, CRUDCacheBase, CRUDCacheDBBase
-from app.schemas.registration import (
-    RegistrationInDB,
-    RegistrationCreate,
-    RegistrationUpdate,
-)
 
 from app.core.config import settings
+from app.crud.base import CRUDCacheBase
+from app.schemas.otp import OTPInDB
+from app.schemas.registration import (
+    RegistrationCreate,
+    RegistrationInDB,
+    RegistrationUpdate,
+)
 
 
 class CRUDCacheRegistration(
@@ -31,6 +30,18 @@ class CRUDCacheRegistration(
         }
         return await self.add_dict(
             cache, obj_in=obj_in, expire=settings.REGISTRATION_EXPIRE_SECONDS
+        )
+
+    async def set_otp(
+        self, cache: aioredis.Redis, *, cache_obj: RegistrationInDB, otp: OTPInDB
+    ):
+        return await self.update(cache, cache_obj=cache_obj, obj_in={"otp_id": otp.id})
+
+    async def verify_mobile(
+        self, cache: aioredis.Redis, *, cache_obj: RegistrationInDB
+    ):
+        return await self.update(
+            cache, cache_obj=cache_obj, obj_in={"mobile_is_verified": True}
         )
 
 
