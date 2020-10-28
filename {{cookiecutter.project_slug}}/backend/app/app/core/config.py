@@ -161,6 +161,8 @@ class Settings(BaseSettings):
     SMS_SECRET_KEY: Optional[str] = None
     SMS_TEMPLATE_ID: Optional[int] = None
 
+    OTP_EXPIRE_SECONDS: int = 120
+
     class Config:
         case_sensitive = True
 

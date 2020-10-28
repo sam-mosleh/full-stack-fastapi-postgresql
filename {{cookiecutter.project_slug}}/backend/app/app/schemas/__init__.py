@@ -9,3 +9,4 @@ from .user import (
     UserInDB,
     UserUpdate,
 )
+from .otp import OTPCreate, OTPInDB, OTP

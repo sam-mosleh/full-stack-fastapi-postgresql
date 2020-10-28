@@ -1,0 +1,31 @@
+import uuid
+from typing import Any, Dict, Optional, Union
+
+import aioredis
+from sqlalchemy.orm import Session
+
+from app.crud.base import CRUDBase, CRUDCacheBase, CRUDCacheDBBase
+from app.schemas.otp import OTPInDB, OTPCreate
+
+from app.core.config import settings
+
+
+class CRUDCacheOTP(CRUDCacheBase[OTPInDB, OTPCreate, OTPInDB]):
+    async def create(
+        self,
+        cache: aioredis.Redis,
+        *,
+        obj_in: OTPCreate,
+        id: Optional[uuid.UUID] = None,
+    ) -> OTPInDB:
+        data = {
+            "id": id or uuid.uuid4(),
+            "valid_for": settings.OTP_EXPIRE_SECONDS,
+            **obj_in.dict(),
+        }
+        return await self.add_dict(
+            cache, obj_in=obj_in.dict(), expire=settings.OTP_EXPIRE_SECONDS
+        )
+
+
+otp_cache = CRUDCacheOTP(OTPInDB)
