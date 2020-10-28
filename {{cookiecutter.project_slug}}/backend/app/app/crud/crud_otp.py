@@ -18,13 +18,13 @@ class CRUDCacheOTP(CRUDCacheBase[OTPInDB, OTPCreate, OTPInDB]):
         obj_in: OTPCreate,
         id: Optional[uuid.UUID] = None,
     ) -> OTPInDB:
-        data = {
+        obj_in = {
             "id": id or uuid.uuid4(),
             "valid_for": settings.OTP_EXPIRE_SECONDS,
             **obj_in.dict(),
         }
         return await self.add_dict(
-            cache, obj_in=obj_in.dict(), expire=settings.OTP_EXPIRE_SECONDS
+            cache, obj_in=obj_in, expire=settings.OTP_EXPIRE_SECONDS
         )
 
 

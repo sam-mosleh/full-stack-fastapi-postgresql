@@ -162,6 +162,7 @@ class Settings(BaseSettings):
     SMS_TEMPLATE_ID: Optional[int] = None
 
     OTP_EXPIRE_SECONDS: int = 120
+    REGISTRATION_EXPIRE_SECONDS: int = 60 * 60
 
     class Config:
         case_sensitive = True

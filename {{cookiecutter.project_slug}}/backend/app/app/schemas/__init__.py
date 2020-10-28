@@ -10,3 +10,4 @@ from .user import (
     UserUpdate,
 )
 from .otp import OTPCreate, OTPInDB, OTP
+from .registration import RegistrationCreate, RegistrationInDB, Registration
