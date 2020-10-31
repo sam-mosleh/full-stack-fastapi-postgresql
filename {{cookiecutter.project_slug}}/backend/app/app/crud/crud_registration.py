@@ -45,4 +45,4 @@ class CRUDCacheRegistration(
         )
 
 
-registration_cache = CRUDCacheRegistration(RegistrationInDB)
+registration_cache = CRUDCacheRegistration(RegistrationInDB, tablename="registration")
