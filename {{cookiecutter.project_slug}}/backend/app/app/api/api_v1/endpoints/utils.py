@@ -8,7 +8,7 @@ from app.api import deps
 from app.core.celery_app import celery_app
 from app.core.socket import external_sio
 from app.pusher.namespaces import user_namespace
-from app.utils import send_test_email, send_verification_code
+from app.utils import send_registration_code, send_test_email
 
 router = APIRouter()
 
@@ -49,7 +49,7 @@ async def test_socket(
     return {"msg": "Sent"}
 
 
-@router.post("/test-sms/", response_model=schemas.Msg)
+@router.post("/test-registration-sms/", response_model=schemas.Msg)
 async def test_sms(
     mobile: str = Body(...),
     data: str = Body(...),
@@ -58,4 +58,4 @@ async def test_sms(
     """
     Test sending SMS verification code.
     """
-    return {"msg": await send_verification_code(mobile, data)}
+    return {"msg": await send_registration_code(mobile, data)}

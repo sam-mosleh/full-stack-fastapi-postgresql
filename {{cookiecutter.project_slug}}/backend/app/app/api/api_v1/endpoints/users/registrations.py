@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app import crud, schemas
 from app.api import deps
 from app.core.config import settings
-from app.utils import send_verification_code
+from app.utils import send_registration_code
 
 router = APIRouter()
 
@@ -66,7 +66,7 @@ async def send_registration_otp(
                 status_code=409, detail="Registration has an active OTP.",
             )
     code = random.randint(1000, 9999)
-    verification_id = await send_verification_code(registration.mobile, code=code)
+    verification_id = await send_registration_code(registration.mobile, code=code)
     obj_in = schemas.OTPCreate(
         mobile=registration.mobile,
         verification_id=verification_id,
