@@ -160,6 +160,7 @@ class Settings(BaseSettings):
 
     PUSHER_USER_NAMESPACE: str = "/user"
 
+    SMS_IS_ACTIVE: bool = False
     SMS_API_KEY: Optional[str] = None
     SMS_SECRET_KEY: Optional[str] = None
     SMS_REGISTRATION_TEMPLATE_ID: Optional[int] = None

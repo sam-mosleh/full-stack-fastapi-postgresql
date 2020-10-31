@@ -33,12 +33,14 @@ async def on_startup() -> None:
     db = SessionLocal()
     await crud.user_cachedb.load(db, app.state.redis)
     db.close()
-    await sms_client.start()
+    if settings.SMS_IS_ACTIVE:
+        await sms_client.start()
 
 
 @app.on_event("shutdown")
 async def on_shutdown() -> None:
-    await sms_client.close()
+    if settings.SMS_IS_ACTIVE:
+        await sms_client.close()
     await app.state.lock.destroy()
     app.state.redis.close()
     await app.state.redis.wait_closed()

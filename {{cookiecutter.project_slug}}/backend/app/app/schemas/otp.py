@@ -1,5 +1,5 @@
 import uuid
-
+from typing import Optional
 from pydantic import BaseModel, validator
 
 
@@ -8,7 +8,7 @@ class OTPBase(BaseModel):
 
 
 class OTPCreate(OTPBase):
-    verification_id: int
+    verification_id: Optional[int]
     verification_code: int
 
 
@@ -35,7 +35,7 @@ class OTPHashed(OTPInDBBase):
 
 
 class OTPInDB(OTPInDBBase):
-    verification_id: int
+    verification_id: Optional[int]
     verification_code: int
 
 

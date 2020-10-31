@@ -107,17 +107,25 @@ def verify_password_reset_token(token: str) -> Optional[str]:
         return None
 
 
-async def send_registration_code(mobile_no: str, code: Union[int, str]) -> int:
-    return await sms_client.send(
-        mobile_no,
-        template_id=settings.SMS_REGISTRATION_TEMPLATE_ID,
-        params={"VerificationCode": code},
-    )
+async def send_registration_code(
+    mobile_no: str, code: Union[int, str]
+) -> Optional[int]:
+    if settings.SMS_IS_ACTIVE:
+        return await sms_client.send(
+            mobile_no,
+            template_id=settings.SMS_REGISTRATION_TEMPLATE_ID,
+            params={"VerificationCode": code},
+        )
+    else:
+        return None
 
 
-async def send_login_code(mobile_no: str, code: Union[int, str]) -> int:
-    return await sms_client.send(
-        mobile_no,
-        template_id=settings.SMS_LOGIN_TEMPLATE_ID,
-        params={"VerificationCode": code},
-    )
+async def send_login_code(mobile_no: str, code: Union[int, str]) -> Optional[int]:
+    if settings.SMS_IS_ACTIVE:
+        return await sms_client.send(
+            mobile_no,
+            template_id=settings.SMS_LOGIN_TEMPLATE_ID,
+            params={"VerificationCode": code},
+        )
+    else:
+        return None

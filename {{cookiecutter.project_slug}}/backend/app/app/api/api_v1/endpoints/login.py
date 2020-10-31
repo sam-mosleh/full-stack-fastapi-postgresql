@@ -4,7 +4,7 @@ from typing import Any
 
 import aioredis
 import aioredlock
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app import crud, schemas
@@ -44,7 +44,11 @@ def create_otp_token(
     }
 
 
-@router.post("/login/otp/send", response_model=schemas.OTPHashed)
+@router.post(
+    "/login/otp/send",
+    response_model=schemas.OTPHashed,
+    status_code=status.HTTP_201_CREATED,
+)
 async def send_otp(
     redis: aioredis.Redis = Depends(deps.get_redis),
     lock_manager: aioredlock.Aioredlock = Depends(deps.get_lock),
