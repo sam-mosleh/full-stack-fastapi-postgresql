@@ -164,6 +164,8 @@ class Settings(BaseSettings):
     SMS_SECRET_KEY: Optional[str] = None
     SMS_REGISTRATION_TEMPLATE_ID: Optional[int] = None
     SMS_LOGIN_TEMPLATE_ID: Optional[int] = None
+    # Update SMS client token every hour = 60 minutes * 60 seconds
+    SMS_UPDATE_TOKEN_INTERVAL: int = 60 * 60
 
     OTP_EXPIRE_SECONDS: int = 120
     REGISTRATION_EXPIRE_SECONDS: int = 60 * 60

@@ -1,4 +1,5 @@
 import aiohttp
+import asyncio
 
 from app.core.config import settings
 
@@ -24,9 +25,15 @@ class SmsIrClient:
     async def start(self):
         self.session = aiohttp.ClientSession()
         self._token = await self.get_token()
+        self._updater_task = asyncio.create_task(self.token_updater())
 
     async def close(self):
         await self.session.close()
+
+    async def token_updater(self):
+        while True:
+            await asyncio.sleep(settings.SMS_UPDATE_TOKEN_INTERVAL)
+            self._token = await self.get_token()
 
     async def get_token(self) -> str:
         url = f"{self.base_url}{self.token_uri}"
