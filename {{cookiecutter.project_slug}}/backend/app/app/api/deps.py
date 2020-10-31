@@ -4,18 +4,17 @@ from typing import Generator, Optional
 import aioredis
 import aioredlock
 import starlette
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Body, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import jwt
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app import crud, models, schemas
 from app.core import security
-from app.core.config import settings
 from app.db.session import SessionLocal
 
-reusable_oauth2 = OAuth2PasswordBearer(tokenUrl=settings.ACCESS_TOKEN_URL)
+reusable_bearer = HTTPBearer()
 
 
 def get_db() -> Generator:
@@ -34,22 +33,48 @@ def get_lock(request: starlette.requests.Request) -> aioredlock.Aioredlock:
     return request.app.state.lock
 
 
-async def get_current_user(
-    db: Session = Depends(get_db),
-    redis: aioredis.Redis = Depends(get_redis),
-    token: str = Depends(reusable_oauth2),
-) -> schemas.UserInDB:
+def get_token_or_raise(credentials: str) -> schemas.TokenPayload:
     try:
-        payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
-        )
-        token_data = schemas.TokenPayload(**payload)
+        payload = security.decode_token(credentials)
+        return schemas.TokenPayload(**payload)
     except (jwt.JWTError, ValidationError):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
         )
-    user = await crud.user_cachedb.get(db, redis, id=token_data.sub)
+
+
+def get_otp_token(otp_token: str = Body(...)) -> schemas.TokenPayload:
+    return get_token_or_raise(otp_token)
+
+
+async def get_current_unverified_user(
+    token: schemas.TokenPayload = Depends(get_otp_token),
+    db: Session = Depends(get_db),
+    redis: aioredis.Redis = Depends(get_redis),
+) -> schemas.UserInDB:
+    if token.is_verified:
+        raise HTTPException(status_code=400, detail="User has already been verified")
+    user = await crud.user_cachedb.get(db, redis, id=token.sub)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+def get_bearer_token(
+    authorization: HTTPAuthorizationCredentials = Depends(reusable_bearer),
+) -> schemas.TokenPayload:
+    return get_token_or_raise(authorization.credentials)
+
+
+async def get_current_user(
+    token: schemas.TokenPayload = Depends(get_bearer_token),
+    db: Session = Depends(get_db),
+    redis: aioredis.Redis = Depends(get_redis),
+) -> schemas.UserInDB:
+    if not token.is_verified:
+        raise HTTPException(status_code=400, detail="User has not verified an OTP")
+    user = await crud.user_cachedb.get(db, redis, id=token.sub)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user

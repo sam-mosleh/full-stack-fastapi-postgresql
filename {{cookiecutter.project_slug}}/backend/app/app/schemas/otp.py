@@ -1,6 +1,6 @@
 import uuid
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 
 class OTPBase(BaseModel):
@@ -26,6 +26,12 @@ class OTPInDBBase(OTPBase):
 
 class OTP(OTPInDBBase):
     pass
+
+
+class OTPHashed(OTPInDBBase):
+    @validator("mobile")
+    def hash_mobile(cls, v: str):
+        return f"{v[:6]}xxxxx{v[-2:]}"
 
 
 class OTPInDB(OTPInDBBase):
