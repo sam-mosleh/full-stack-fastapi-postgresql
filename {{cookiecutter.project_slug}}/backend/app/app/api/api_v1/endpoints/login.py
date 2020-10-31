@@ -28,7 +28,7 @@ def create_otp_token(
     db: Session = Depends(deps.get_db),
 ) -> Any:
     """
-    Basic auth
+    Create an OTP token for the user
     """
     user = crud.user.authenticate(db, username=username, password=password)
     if user is None:
@@ -51,7 +51,7 @@ async def send_otp(
     current_user: schemas.UserInDB = Depends(deps.get_current_unverified_user),
 ) -> Any:
     """
-    Basic auth
+    Send an OTP to the unverified user
     """
     try:
         lock = await lock_manager.lock(
@@ -73,12 +73,11 @@ async def send_otp(
 @router.post("/login/access-token", response_model=schemas.Token)
 async def create_access_token(
     code: int = Body(...),
-    db: Session = Depends(deps.get_db),
     redis: aioredis.Redis = Depends(deps.get_redis),
     current_user: schemas.UserInDB = Depends(deps.get_current_unverified_user),
 ) -> Any:
     """
-    Basic auth
+    Verify user by verification code sent to its mobile
     """
     otp = await crud.otp_cache.get(redis, id=current_user.id)
     if otp is None:
