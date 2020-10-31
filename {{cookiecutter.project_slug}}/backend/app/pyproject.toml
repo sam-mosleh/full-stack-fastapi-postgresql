@@ -30,6 +30,7 @@ aioredlock = "^0.5.2"
 python-socketio = "^4.6.0"
 aiohttp = {extras = ["speedups"], version = "^3.6.2"}
 loguru = "^0.5.2"
+async-asgi-testclient = "^1.4.4"
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.770"

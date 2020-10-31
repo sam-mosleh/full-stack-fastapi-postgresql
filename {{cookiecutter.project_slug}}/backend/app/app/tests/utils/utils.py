@@ -2,8 +2,10 @@ import random
 import string
 from typing import Dict
 
-from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
+from app import crud
+from app.core import security
 from app.core.config import settings
 
 
@@ -19,13 +21,16 @@ def random_mobile_number() -> str:
     return f"+989{random.randint(100000000, 999999999)}"
 
 
-def get_superuser_token_headers(client: TestClient) -> Dict[str, str]:
-    login_data = {
-        "username": settings.FIRST_SUPERUSER_USERNAME,
-        "password": settings.FIRST_SUPERUSER_PASSWORD,
-    }
-    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
-    tokens = r.json()
-    a_token = tokens["access_token"]
-    headers = {"Authorization": f"Bearer {a_token}"}
+def get_user_token_headers_from_email(db: Session, *, email: str) -> Dict[str, str]:
+    user = crud.user.get_by_email(db, email=email)
+    token = security.create_access_token(user.id, is_verified=True)
+    headers = {"Authorization": f"Bearer {token}"}
     return headers
+
+
+def get_superuser_token_headers(db: Session) -> Dict[str, str]:
+    return get_user_token_headers_from_email(db, email=settings.FIRST_SUPERUSER_EMAIL)
+
+
+def get_normal_user_token_headers(db: Session) -> Dict[str, str]:
+    return get_user_token_headers_from_email(db, email=settings.EMAIL_TEST_USER)
