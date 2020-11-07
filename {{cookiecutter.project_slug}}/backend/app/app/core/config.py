@@ -163,8 +163,28 @@ class Settings(BaseSettings):
     SMS_IS_ACTIVE: bool = False
     SMS_API_KEY: Optional[str] = None
     SMS_SECRET_KEY: Optional[str] = None
+    SMS_OTP_DEFAULT_TEMPLATE_ID: Optional[int] = None
+
     SMS_REGISTRATION_TEMPLATE_ID: Optional[int] = None
+
+    @validator("SMS_REGISTRATION_TEMPLATE_ID", pre=True)
+    def set_registration_template_to_default_if_none(
+        cls, v: Optional[int], values: Dict[str, Any]
+    ) -> Any:
+        if isinstance(v, int):
+            return v
+        return values.get("SMS_OTP_DEFAULT_TEMPLATE_ID")
+
     SMS_LOGIN_TEMPLATE_ID: Optional[int] = None
+
+    @validator("SMS_LOGIN_TEMPLATE_ID", pre=True)
+    def set_login_template_to_default_if_none(
+        cls, v: Optional[int], values: Dict[str, Any]
+    ) -> Any:
+        if isinstance(v, int):
+            return v
+        return values.get("SMS_OTP_DEFAULT_TEMPLATE_ID")
+
     # Update SMS client token every hour = 60 minutes * 60 seconds
     SMS_UPDATE_TOKEN_INTERVAL: int = 60 * 60
 
