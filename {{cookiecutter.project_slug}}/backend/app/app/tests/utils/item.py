@@ -1,4 +1,3 @@
-import uuid
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -9,9 +8,7 @@ from app.tests.utils.user import create_random_user
 from app.tests.utils.utils import random_lower_string
 
 
-def create_random_item(
-    db: Session, *, owner_id: Optional[uuid.UUID] = None
-) -> models.Item:
+def create_random_item(db: Session, *, owner_id: Optional[int] = None) -> models.Item:
     if owner_id is None:
         user = create_random_user(db)
         owner_id = user.id

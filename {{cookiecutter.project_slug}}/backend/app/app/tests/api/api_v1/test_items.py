@@ -26,7 +26,7 @@ def test_create_item(
     assert "id" in content
     assert content["title"] == data["title"]
     assert content["description"] == data["description"]
-    assert content["owner_id"] == str(normal_user.id)
+    assert content["owner_id"] == normal_user.id
 
 
 def test_read_specific_item_by_superuser(
@@ -41,7 +41,7 @@ def test_read_specific_item_by_superuser(
     assert content["title"] == new_item.title
     assert content["description"] == new_item.description
     assert content["id"] == new_item.id
-    assert content["owner_id"] == str(new_item.owner_id)
+    assert content["owner_id"] == new_item.owner_id
 
 
 def test_read_all_items_of_specific_user_by_superuser(
@@ -60,8 +60,8 @@ def test_read_all_items_of_specific_user_by_superuser(
     response.raise_for_status()
     all_items = response.json()
     assert len(all_items) == 2
-    assert all_items[0]["owner_id"] == str(new_user.id)
-    assert all_items[1]["owner_id"] == str(new_user.id)
+    assert all_items[0]["owner_id"] == new_user.id
+    assert all_items[1]["owner_id"] == new_user.id
 
 
 def test_read_specific_item_by_owner(
@@ -79,7 +79,7 @@ def test_read_specific_item_by_owner(
     assert content["title"] == new_item.title
     assert content["description"] == new_item.description
     assert content["id"] == new_item.id
-    assert content["owner_id"] == str(new_item.owner_id)
+    assert content["owner_id"] == new_item.owner_id
 
 
 def test_read_specific_item_by_non_owner(
@@ -104,4 +104,4 @@ def test_retrieve_items_by_owner(
     all_items = response.json()
     for item in all_items:
         assert "id" in item
-        assert item["owner_id"] == str(normal_user.id)
+        assert item["owner_id"] == normal_user.id

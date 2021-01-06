@@ -15,12 +15,12 @@ def test_get_user_by_superuser(
     client: TestClient, superuser_token_headers: Dict[str, str]
 ) -> None:
     response = client.get(
-        f"{settings.API_V1_STR}/users/", headers=superuser_token_headers
+        f"{settings.API_V1_STR}/user", headers=superuser_token_headers
     )
     current_user = response.json()
     assert current_user
     assert current_user["is_active"] is True
-    assert current_user["is_superuser"]
+    assert current_user["is_superuser"] is True
     assert current_user["email"] == settings.FIRST_SUPERUSER_EMAIL
 
 
@@ -28,7 +28,7 @@ def test_get_user_by_normal_user(
     client: TestClient, normal_user_token_headers: Dict[str, str]
 ) -> None:
     response = client.get(
-        f"{settings.API_V1_STR}/users", headers=normal_user_token_headers
+        f"{settings.API_V1_STR}/user", headers=normal_user_token_headers
     )
     current_user = response.json()
     assert current_user
@@ -67,7 +67,7 @@ def test_create_new_user_by_normal_user_with_open_registration(
     email = random_email()
     password = random_lower_string()
     data = {"username": username, "email": email, "password": password}
-    response = client.post(f"{settings.API_V1_STR}/users/", json=data)
+    response = client.post(f"{settings.API_V1_STR}/user", json=data)
     response.raise_for_status()
     created_user = response.json()
     user = crud.user.get_by_email(db, email=email)
@@ -86,7 +86,7 @@ def test_create_new_user_by_normal_user_without_open_registration(
     email = random_email()
     password = random_lower_string()
     data = {"username": username, "email": email, "password": password}
-    response = client.post(f"{settings.API_V1_STR}/users/", json=data)
+    response = client.post(f"{settings.API_V1_STR}/user", json=data)
     with pytest.raises(HTTPError):
         response.raise_for_status()
     content = response.json()

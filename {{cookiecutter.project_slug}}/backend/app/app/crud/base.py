@@ -2,6 +2,7 @@ import asyncio
 from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
 
 from aioredis import Redis
+from aioredlock import Aioredlock, Lock
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -175,13 +176,28 @@ class CRUDCacheBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaType]
         else:
             return None
 
+    @property
+    def lock_name(self):
+        return f"lock:table:{self.tablename}"
 
-class CRUDCacheDBBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaType]):
+    async def lock(
+        self, lock_manager: Aioredlock, lock_timeout: Optional[int] = None
+    ) -> Lock:
+        return await lock_manager.lock(self.lock_name, lock_timeout)
+
+
+class CRUDDBCacheBase(
+    Generic[ModelType, CacheSchemaType, CreateSchemaType, UpdateSchemaType]
+):
     def __init__(
-        self, crud_db: CRUDBase, crud_cache: CRUDCacheBase,
+        self,
+        crud_db: CRUDBase,
+        crud_cache: CRUDCacheBase,
+        expire: Optional[int] = None,
     ):
         self.crud_db = crud_db
         self.crud_cache = crud_cache
+        self.expire = expire
 
     async def get(
         self, db: Session, cache: Redis, *, id: Any
@@ -204,18 +220,24 @@ class CRUDCacheDBBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaTyp
                 coros.append(self.crud_cache.add_model(cache, obj_in=record))
         return await asyncio.gather(*coros)
 
-    async def create(
-        self, db: Session, cache: Redis, *, obj_in: CreateSchemaType
+    async def cache_model(
+        self, cache: Redis, *, db_obj: ModelType, expire: Optional[int] = None
     ) -> CacheSchemaType:
-        obj_data = obj_in.dict()
-        return await self.create_dict(db, cache, obj_in=obj_data)
+        object_expire = expire or self.expire
+        return await self.crud_cache.add_model(
+            cache, obj_in=db_obj, expire=object_expire
+        )
 
-    async def create_dict(
-        self, db: Session, cache: Redis, *, obj_in: Dict[str, Any]
+    async def create(
+        self,
+        db: Session,
+        cache: Redis,
+        *,
+        obj_in: CreateSchemaType,
+        expire: Optional[int] = None,
     ) -> CacheSchemaType:
-        result = await self.crud_cache.add_dict(cache, obj_in=obj_in)
-        self.crud_db.create_dict(db, create_data=obj_in)
-        return result
+        model = self.crud_db.create(db, obj_in=obj_in)
+        return await self.cache_model(cache, db_obj=model, expire=expire)
 
     async def update(
         self,
@@ -224,31 +246,18 @@ class CRUDCacheDBBase(Generic[CacheSchemaType, CreateSchemaType, UpdateSchemaTyp
         *,
         cache_obj: CacheSchemaType,
         obj_in: Union[UpdateSchemaType, Dict[str, Any]],
+        expire: Optional[int] = None,
     ) -> CacheSchemaType:
-        if isinstance(obj_in, dict):
-            update_data = obj_in
-        else:
-            update_data = obj_in.dict(exclude_unset=True)
-        return await self.update_dict(
-            db, cache, cache_obj=cache_obj, obj_in=update_data
-        )
-
-    async def update_dict(
-        self,
-        db: Session,
-        cache: Redis,
-        *,
-        cache_obj: CacheSchemaType,
-        obj_in: Dict[str, Any],
-    ) -> CacheSchemaType:
-        data = cache_obj.dict()
-        data.update(obj_in)
-        result = await self.crud_cache.add_dict(cache, obj_in=data)
-        model = self.crud_db.get(db, cache_obj.id)
-        self.crud_db.update_dict(db, db_obj=model, update_data=obj_in)
-        return result
+        db_obj = self.crud_db.get(db, cache_obj.id)
+        model = self.crud_db.update(db, db_obj=db_obj, obj_in=obj_in)
+        return await self.cache_model(cache, db_obj=model, expire=expire)
 
     async def remove(self, db: Session, cache: Redis, *, id: Any) -> CacheSchemaType:
-        await self.crud_cache.remove(cache=cache, id=id)
         model = self.crud_db.remove(db, id=id)
-        return self.crud_cache.schema.from_orm(model)
+        cache_obj = await self.crud_cache.remove(cache, id=id)
+        return cache_obj or self.crud_cache.build(model)
+
+    async def lock(
+        self, lock_manager: Aioredlock, lock_timeout: Optional[int] = None
+    ) -> Lock:
+        return await self.crud_cache.lock(lock_manager, lock_timeout)
