@@ -12,7 +12,7 @@ from app.utils import send_new_account_email
 router = APIRouter()
 
 
-@router.put("/", response_model=schemas.User)
+@router.put("", response_model=schemas.User)
 async def update_user_me(
     *,
     user_in: schemas.UnprivilegedUserUpdate,
@@ -29,7 +29,7 @@ async def update_user_me(
     )
 
 
-@router.get("/", response_model=schemas.User)
+@router.get("", response_model=schemas.User)
 def read_user_me(
     db: Session = Depends(deps.get_db),
     current_user: schemas.UserInDB = Depends(deps.get_current_active_user),
@@ -40,7 +40,7 @@ def read_user_me(
     return current_user
 
 
-@router.post("/", response_model=schemas.User)
+@router.post("", response_model=schemas.User)
 async def create_user_open(
     *,
     user_in: schemas.UnprivilegedUserCreate,
