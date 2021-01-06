@@ -1,4 +1,3 @@
-import uuid
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr, validator
@@ -24,7 +23,8 @@ class UnprivilegedUserUpdate(UnprivilegedUserBase):
 
     @validator("password")
     def prevent_none(cls, v):
-        assert v is not None, "password may not be empty"
+        if v is None:
+            raise ValueError("password may not be empty")
         return v
 
 
@@ -47,22 +47,25 @@ class UserUpdate(UserBase):
 
     @validator("username")
     def prevent_none_username(cls, v):
-        assert v is not None, "username may not be empty"
+        if v is None:
+            raise ValueError("username may not be empty")
         return v
 
     @validator("email")
     def prevent_none_email(cls, v):
-        assert v is not None, "email may not be empty"
+        if v is None:
+            raise ValueError("email may not be empty")
         return v
 
     @validator("password")
     def prevent_none_password(cls, v):
-        assert v is not None, "password may not be empty"
+        if v is None:
+            raise ValueError("password may not be empty")
         return v
 
 
 class UserInDBBase(UserBase):
-    id: uuid.UUID
+    id: int
 
     class Config:
         orm_mode = True

@@ -1,4 +1,3 @@
-import uuid
 from typing import Generator, Optional
 
 import aioredis
@@ -74,9 +73,7 @@ def get_current_active_superuser(
 
 
 async def get_user_by_id(
-    id: uuid.UUID,
-    db: Session = Depends(get_db),
-    redis: aioredis.Redis = Depends(get_redis),
+    id: int, db: Session = Depends(get_db), redis: aioredis.Redis = Depends(get_redis),
 ) -> schemas.UserInDB:
     user = await crud.user_cachedb.get(db, redis, id=id)
     if user is None:
@@ -88,7 +85,7 @@ async def get_user_by_id(
 
 
 async def get_owner_by_id(
-    owner_id: Optional[uuid.UUID] = None,
+    owner_id: Optional[int] = None,
     db: Session = Depends(get_db),
     redis: aioredis.Redis = Depends(get_redis),
 ) -> Optional[schemas.UserInDB]:
