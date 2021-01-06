@@ -18,6 +18,9 @@ services:
       - --providers.docker.exposedbydefault=false
       # Enable Docker Swarm mode
       - --providers.docker.swarmmode
+      # Trust the forwarded headers information (X-Forwarded-*) from the public Traefik
+      - --entryPoints.web.address=:80
+      - --entryPoints.web.forwardedHeaders.insecure
       # Enable the access log, with HTTP requests
       - --accesslog
       # Enable the Traefik log, for configurations and errors
